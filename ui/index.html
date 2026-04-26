@@ -525,7 +525,22 @@
 <script src="app.js"></script>
 <script>
   // Auto-login after app.js is fully loaded
-  if (authToken) { showApp(); }
+  // Verify token is still valid before auto-login
+  if (authToken) {
+    fetch(`${API}/chat/sessions`, {
+      headers: { 'Authorization': `Bearer ${authToken}` }
+    }).then(r => {
+      if (r.ok) {
+        showApp();
+      } else {
+        localStorage.removeItem('medai_token');
+        localStorage.removeItem('medai_user');
+      }
+    }).catch(() => {
+      localStorage.removeItem('medai_token');
+      localStorage.removeItem('medai_user');
+    });
+}
 </script>
 </body>
 </html>
