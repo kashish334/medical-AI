@@ -369,6 +369,19 @@ function getAppHTML() {
     .loading-dots span:nth-child(3) { animation-delay: 0.4s; }
     @keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-8px)} }
 
+    /* ── Skeleton loader ──────────────────────────────────────────────────────── */
+    @keyframes shimmer {
+      0%   { background-position: -600px 0; }
+      100% { background-position:  600px 0; }
+    }
+    .skeleton-bubble-wrap { display: flex; flex-direction: column; gap: 10px; min-width: 260px; }
+    .skel-line {
+      height: 13px; border-radius: 6px;
+      background: linear-gradient(90deg, #1e2d45 25%, #2a3f5f 50%, #1e2d45 75%);
+      background-size: 600px 100%;
+      animation: shimmer 1.5s infinite linear;
+    }
+
     /* ── Misc ────────────────────────────────────────────────────────────────── */
     .section-heading { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 16px; margin-top: 24px; display: flex; align-items: center; gap: 8px; }
     .past-report-item { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; margin-bottom: 10px; cursor: pointer; transition: border-color 0.15s; }
@@ -507,6 +520,15 @@ function getAppHTML() {
                   <li>Suggests questions to ask your doctor</li>
                 </ul>
               </div>
+              <div style="margin-top:14px; background:rgba(245,158,11,0.06); border:1px solid rgba(245,158,11,0.35); border-left:4px solid var(--warning); border-radius:10px; padding:14px 16px;">
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:7px;">
+                  <span style="font-size:15px;">⚠️</span>
+                  <span style="color:var(--warning); font-size:11px; font-weight:700; letter-spacing:0.06em;">CLINICAL DISCLAIMER</span>
+                </div>
+                <p style="color:var(--muted2); font-size:12px; line-height:1.65; margin:0;">
+                  This tool is intended for <strong style="color:var(--text);">educational and informational purposes only</strong>. All AI-generated interpretations must be reviewed by a licensed healthcare provider before any clinical action. It is not a diagnostic tool.
+                </p>
+              </div>
               <div class="section-heading" style="margin-top:20px;">🗂 Past Reports</div>
               <div id="pastReports"><div style="font-size:12px; color:var(--muted);">Loading…</div></div>
             </div>
@@ -568,7 +590,7 @@ function getAppHTML() {
               <div class="chart-header"><div class="chart-title">User Activity</div></div>
               <table class="users-table">
                 <thead><tr>
-                  <th>User</th><th>Top Disease</th><th>Total Queries</th><th>Reports</th><th>Last Active</th>
+                  <th>User</th><th>Top Disease</th><th>Total Queries</th><th>Reports</th><th>Positive Feedback</th><th>Last Active</th>
                 </tr></thead>
                 <tbody id="usersTable"><tr><td colspan="5" style="color:var(--muted);font-size:12px;padding:16px;">Loading…</td></tr></tbody>
               </table>
@@ -660,19 +682,34 @@ async function sendMessage() {
 
   input.value = ''; autoResize(input);
   messages.push({ role:'user', content:q });
-  renderMessages();
 
-  // Show loading
-  const loadId = 'loading_' + Date.now();
   const chatEl = document.getElementById('chatMessages');
+  const empty = document.getElementById('chatEmpty');
+  if (empty) empty.style.display = 'none';
+
+  // Append user bubble directly without full redraw
+  chatEl.insertAdjacentHTML('beforeend', `
+    <div class="msg-user">
+      <div class="bubble">${escHtml(q)}</div>
+    </div>
+  `);
+
+  // Append skeleton immediately after user bubble
+  const loadId = 'loading_' + Date.now();
   chatEl.insertAdjacentHTML('beforeend', `
     <div class="msg-bot" id="${loadId}">
       <div class="bot-avatar">⚕</div>
-      <div class="bubble"><div class="loading-dots"><span></span><span></span><span></span></div></div>
+      <div class="bubble skeleton-bubble-wrap">
+        <div class="skel-line" style="width:88%"></div>
+        <div class="skel-line" style="width:72%"></div>
+        <div class="skel-line" style="width:80%"></div>
+        <div class="skel-line" style="width:55%"></div>
+      </div>
     </div>
   `);
   chatEl.scrollTop = chatEl.scrollHeight;
 
+  let botMsg = null;
   try {
     const r = await fetch(`${API}/chat/ask`, {
       method:'POST',
@@ -680,22 +717,46 @@ async function sendMessage() {
       body: JSON.stringify({ question:q, session_id:sessionId })
     });
 
-    document.getElementById(loadId)?.remove();
-
     if (r.status === 401) { doLogout(); return; }
     if (!r.ok) {
       let detail = `Server error (${r.status})`;
       try { detail = (await r.json()).detail || detail; } catch{}
-      messages.push({ role:'assistant', content:`❌ ${detail}`, category:'error', confidence:0, low_confidence:true, message_id:null });
+      botMsg = { role:'assistant', content:`❌ ${detail}`, category:'error', confidence:0, low_confidence:true, message_id:null };
     } else {
       const d = await r.json();
-      messages.push({ role:'assistant', content:d.answer, category:d.category, confidence:d.confidence, low_confidence:d.low_confidence, message_id:d.message_id });
+      botMsg = { role:'assistant', content:d.answer, category:d.category, confidence:d.confidence, low_confidence:d.low_confidence, message_id:d.message_id };
     }
   } catch(e) {
-    document.getElementById(loadId)?.remove();
-    messages.push({ role:'assistant', content:'❌ Cannot reach backend. Is the server running?', category:'error', confidence:0, low_confidence:true, message_id:null });
+    botMsg = { role:'assistant', content:'❌ Cannot reach backend. Is the server running?', category:'error', confidence:0, low_confidence:true, message_id:null };
   }
-  renderMessages();
+
+  messages.push(botMsg);
+
+  // Replace skeleton directly with answer — no full redraw, no blank flash
+  const skelEl = document.getElementById(loadId);
+  if (skelEl) {
+    const conf    = ((botMsg.confidence||0)*100).toFixed(0);
+    const cat     = (botMsg.category||'').replace(/_/g,' ');
+    const lowWarn = botMsg.low_confidence;
+    const mid     = botMsg.message_id;
+    skelEl.outerHTML = `
+      <div class="msg-bot">
+        <div class="bot-avatar">⚕</div>
+        <div>
+          <div class="bubble">${markdownToHtml(botMsg.content)}</div>
+          <div class="msg-meta">
+            ${cat ? `<span class="cat-badge ${lowWarn?'warn':''}}">${cat}</span>` : ''}
+            ${conf > 0 ? `<span class="conf-label">${conf}% confidence</span>` : ''}
+            ${mid ? `
+              <button class="fb-btn" id="up_${mid}" onclick="sendFeedback(${mid},1,'up_${mid}','dn_${mid}')">👍</button>
+              <button class="fb-btn" id="dn_${mid}" onclick="sendFeedback(${mid},-1,'up_${mid}','dn_${mid}')">👎</button>
+            ` : ''}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+  chatEl.scrollTop = chatEl.scrollHeight;
 }
 
 function renderMessages() {
@@ -852,20 +913,30 @@ function downloadAnalysis() {
   a.click();
 }
 
+// Store past report analyses by index to avoid huge inline onclick strings
+const pastReportCache = {};
+
 async function loadPastReports() {
   const el = document.getElementById('pastReports');
   if (!el) return;
   try {
     const r = await fetch(`${API}/report/history`, { headers:{'Authorization':`Bearer ${authToken}`} });
+    if (!r.ok) { el.innerHTML = '<div style="font-size:12px;color:var(--muted);">No reports uploaded yet.</div>'; return; }
     const reports = await r.json();
     if (!reports.length) { el.innerHTML = '<div style="font-size:12px;color:var(--muted);">No reports uploaded yet.</div>'; return; }
-    el.innerHTML = reports.map(rep => `
-      <div class="past-report-item" onclick="showAnalysis(${JSON.stringify(rep.analysis)}, ${JSON.stringify(rep.filename)})">
+    reports.forEach((rep, i) => { pastReportCache[i] = rep; });
+    el.innerHTML = reports.map((rep, i) => `
+      <div class="past-report-item" onclick="loadCachedReport(${i})">
         <div class="pri-name">📄 ${rep.filename}</div>
         <div class="pri-date">${rep.uploaded_at?.substring(0,16) || ''}</div>
       </div>
     `).join('');
-  } catch { el.innerHTML = '<div style="font-size:12px;color:var(--muted);">Could not load.</div>'; }
+  } catch { el.innerHTML = '<div style="font-size:12px;color:var(--muted);">No reports uploaded yet.</div>'; }
+}
+
+function loadCachedReport(i) {
+  const rep = pastReportCache[i];
+  if (rep) showAnalysis(rep.analysis, rep.filename);
 }
 
 /* ── Admin Dashboard ──────────────────────────────────────────────────────── */
@@ -970,20 +1041,22 @@ function renderDonut(diseases) {
 function renderSentiment(fb) {
   const el = document.getElementById('sentimentChart');
   if (!el) return;
-  const total = (fb.positive + fb.negative) || 1;
-  const days  = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-  // Simulate daily breakdown from total
-  const posRatio = fb.positive / total;
-  el.innerHTML = days.map(day => {
-    const w = Math.round(40 + Math.random()*50);
-    return `<div class="sent-row">
-      <div class="sent-label">${day}</div>
-      <div class="sent-track">
-        <div class="sent-fill" style="width:${w}%; background:var(--teal);"></div>
-      </div>
-      <div class="sent-val">${w}%</div>
-    </div>`;
-  }).join('');
+  const total  = (fb.positive + fb.negative) || 1;
+  const posPct = Math.round(fb.positive / total * 100);
+  const negPct = 100 - posPct;
+  el.innerHTML = `
+    <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+      <span style="color:var(--teal); font-size:13px; font-weight:600;">👍 Positive &nbsp;${posPct}%</span>
+      <span style="color:var(--danger); font-size:13px; font-weight:600;">${negPct}% &nbsp;👎 Negative</span>
+    </div>
+    <div style="background:var(--bg-input); border-radius:999px; height:20px; overflow:hidden;">
+      <div style="background:linear-gradient(90deg,var(--teal),#34d399); width:${posPct}%; height:100%; border-radius:999px; transition:width 0.8s ease;"></div>
+    </div>
+    <div style="display:flex; justify-content:space-between; margin-top:8px;">
+      <span style="color:var(--muted); font-size:11px;">${fb.positive} positive responses</span>
+      <span style="color:var(--muted); font-size:11px;">${fb.negative} negative · ${fb.total} total</span>
+    </div>
+  `;
 }
 
 function renderDiseases(diseases) {
@@ -1009,15 +1082,28 @@ function renderUsersTable(users) {
   const tb = document.getElementById('usersTable');
   if (!tb) return;
   if (!users.length) { tb.innerHTML = '<tr><td colspan="5" style="color:var(--muted);font-size:12px;padding:16px;">No users yet.</td></tr>'; return; }
-  tb.innerHTML = users.map(u => `
+  tb.innerHTML = users.map(u => {
+    const posFb    = u.positive_feedback || 0;
+    const totalFb  = u.total_feedback   || 0;
+    const pct      = totalFb > 0 ? Math.round(posFb / totalFb * 100) : 0;
+    const barColor = pct >= 70 ? 'var(--teal)' : pct >= 40 ? 'var(--warning)' : 'var(--danger)';
+    return `
     <tr>
       <td><div style="font-weight:600;">${u.username}</div><div style="font-size:11px;color:var(--muted);">${u.email}</div></td>
       <td><span class="u-badge">${(u.top_category||'—').replace(/_/g,' ')}</span></td>
       <td style="font-weight:700;color:var(--blue-bright);">${u.total_queries}</td>
       <td>${u.report_uploads}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <div style="flex:1;height:7px;background:var(--bg-input);border-radius:999px;overflow:hidden;">
+            <div style="height:100%;width:${pct}%;background:${barColor};border-radius:999px;"></div>
+          </div>
+          <span style="color:${barColor};font-size:11px;font-weight:700;min-width:32px;">${pct}%</span>
+        </div>
+      </td>
       <td style="font-size:11px;color:var(--muted);">${u.last_active}</td>
-    </tr>
-  `).join('');
+    </tr>`;
+  }).join('');
 }
 
 /* ── Utilities ────────────────────────────────────────────────────────────── */

@@ -415,12 +415,9 @@
 </div>
 
 <script>
-  const API = 'http://localhost:8000';
+  const API = '';
   let authToken = localStorage.getItem('medai_token') || '';
   let currentUser = JSON.parse(localStorage.getItem('medai_user') || '{}');
-
-  // Auto-login if token exists
-  if (authToken) { showApp(); }
 
   function switchTab(tab) {
     document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', (tab==='login'?i===0:i===1)));
@@ -526,5 +523,9 @@
   }
 </script>
 <script src="app.js"></script>
+<script>
+  // Auto-login after app.js is fully loaded
+  if (authToken) { showApp(); }
+</script>
 </body>
 </html>

@@ -60,24 +60,28 @@ def generate_answer(
         history_str = "\n".join(lines)
 
     # Final prompt
-    prompt = f"""You are a helpful medical information assistant.
-Your answers are grounded ONLY in the provided medical sources below.
-Do not invent information. If the sources don't cover the question, say so clearly.
-Always remind the user to consult a qualified doctor for personal medical advice.
+    prompt = f"""You are a helpful, empathetic medical information assistant named MedAI.
+Your answers are grounded ONLY in the provided medical knowledge below.
+Do not invent information. If the knowledge base does not cover the question, say so clearly.
+
+IMPORTANT FORMATTING RULES:
+- NEVER mention "Source 1", "Source 2", "Source 3" or any source numbers in your response.
+- Write in clear, plain language a patient can understand.
+- Use bullet points when listing symptoms, steps, or multiple items.
+- Keep tone warm, informative, and professional.
+- End EVERY response with: "Please consult a qualified doctor for personal medical advice."
 
 {'--- Previous conversation ---' if history_str else ''}
 {history_str}
 
---- Medical source documents ---
+--- Medical Knowledge ---
 {context_block}
 
 --- Patient question ---
 {question}
 
 --- Your answer ---
-Provide a clear, accurate, and concise answer based on the sources above.
-Mention which source (Source 1, 2, or 3) supports each key point.
-End with a one-sentence reminder to consult a healthcare professional."""
+Provide a clear, accurate, and well-structured answer. Do not reference source numbers anywhere."""
 
     try:
         response = model.generate_content(prompt)

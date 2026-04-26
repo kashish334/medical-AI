@@ -235,15 +235,29 @@ def get_all_users_summary(db: Session) -> list[dict]:
             .count()
         )
 
+        # Feedback counts
+        pos_fb = (
+            db.query(Feedback)
+            .filter(Feedback.user_id == user.id, Feedback.rating == 1)
+            .count()
+        )
+        total_fb = (
+            db.query(Feedback)
+            .filter(Feedback.user_id == user.id)
+            .count()
+        )
+
         result.append({
-            "user_id":      user.id,
-            "username":     user.username,
-            "email":        user.email,
-            "total_queries": total,
-            "top_category": top_category,
-            "last_active":  last_active,
-            "report_uploads": report_count,
-            "joined":       str(user.created_at)[:10],
+            "user_id":           user.id,
+            "username":          user.username,
+            "email":             user.email,
+            "total_queries":     total,
+            "top_category":      top_category,
+            "last_active":       last_active,
+            "report_uploads":    report_count,
+            "joined":            str(user.created_at)[:10],
+            "positive_feedback": pos_fb,
+            "total_feedback":    total_fb,
         })
 
     # Sort by most active first

@@ -1,0 +1,27 @@
+{
+  "name": "medical-ai",
+  "version": "1.0.0",
+  "description": "A production-grade **Retrieval-Augmented Generation (RAG)** medical chatbot built on the MedQuAD dataset.\r Upgraded from a simple FAISS search script to a full multi-service system with FastAPI, authentication, analytics, and CI/CD.",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "dev": "vite"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kashish334/medical-AI.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/kashish334/medical-AI/issues"
+  },
+  "homepage": "https://github.com/kashish334/medical-AI#readme",
+  "devDependencies": {
+    "vite": "^8.0.10"
+  }
+}
