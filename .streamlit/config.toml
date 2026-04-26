@@ -1,0 +1,11 @@
+[global]
+# Disable automatic multipage detection so our manual routing in app.py works
+developmentMode = false
+
+[server]
+headless = true
+port = 8501
+
+[runner]
+# Prevent Streamlit from treating pages/ folder as multipage app
+fastReruns = true

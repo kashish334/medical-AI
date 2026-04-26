@@ -1,0 +1,38 @@
+# Environment
+.env
+*.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.Python
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+env/
+
+# Large ML artifacts (store on HuggingFace Hub or Google Drive)
+indexes/*.index
+indexes/*.bin
+models_saved/*.pkl
+models_saved/*.h5
+
+# Data (too large for git)
+data/*.csv
+
+# DB
+*.db
+*.sqlite
+
+# Jupyter
+.ipynb_checkpoints/
+
+# IDE
+.vscode/
+.idea/
+
+# Docker
+.dockerignore
