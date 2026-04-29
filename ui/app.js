@@ -1027,7 +1027,13 @@ function renderDonut(diseases) {
 function renderSentiment(fb) {
   const el = document.getElementById('sentimentChart');
   if (!el) return;
-  const total  = (fb.positive + fb.negative) || 1;
+  const total  = (fb.positive + fb.negative) || 0;
+  if (total === 0) {
+    el.innerHTML = `<div style="color:var(--muted); font-size:12px; padding:16px 0; text-align:center;">
+      No feedback submitted yet. Thumbs up/down buttons in chat will appear here.
+    </div>`;
+    return;
+  }
   const posPct = Math.round(fb.positive / total * 100);
   const negPct = 100 - posPct;
   el.innerHTML = `
@@ -1040,7 +1046,7 @@ function renderSentiment(fb) {
     </div>
     <div style="display:flex; justify-content:space-between; margin-top:8px;">
       <span style="color:var(--muted); font-size:11px;">${fb.positive} positive responses</span>
-      <span style="color:var(--muted); font-size:11px;">${fb.negative} negative · ${fb.total} total</span>
+      <span style="color:var(--muted); font-size:11px;">${fb.negative} negative &middot; ${fb.total} total</span>
     </div>
   `;
 }
@@ -1108,6 +1114,66 @@ function markdownToHtml(text) {
     .replace(/(<li.*<\/li>\n?)+/g, s => `<ul style="padding-left:18px;margin:6px 0;">${s}</ul>`)
     .replace(/\n\n/g,'<br><br>')
     .replace(/\n/g,'<br>');
+}
+
+/* ── Feedback ──────────────────────────────────────────────────────────────── */
+async function sendFeedback(messageId, rating, upId, dnId) {
+  // Optimistic UI — highlight immediately
+  const upBtn = document.getElementById(upId);
+  const dnBtn = document.getElementById(dnId);
+  if (!upBtn || !dnBtn) return;
+
+  // Toggle: if already active, do nothing (prevent double submit)
+  if (upBtn.classList.contains('active-up') || dnBtn.classList.contains('active-dn')) return;
+
+  // Visual feedback first
+  if (rating === 1) {
+    upBtn.classList.add('active-up');
+    upBtn.disabled = true;
+    dnBtn.disabled = true;
+  } else {
+    dnBtn.classList.add('active-dn');
+    upBtn.disabled = true;
+    dnBtn.disabled = true;
+  }
+
+  try {
+    const r = await fetch(`${API}/chat/feedback`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authToken}`,
+      },
+      body: JSON.stringify({
+        session_id:  sessionId,
+        message_id:  messageId,
+        rating:      rating,
+      }),
+    });
+
+    if (!r.ok) {
+      // Revert on failure
+      upBtn.classList.remove('active-up');
+      dnBtn.classList.remove('active-dn');
+      upBtn.disabled = false;
+      dnBtn.disabled = false;
+      const d = await r.json().catch(() => ({}));
+      console.error('Feedback error:', d.detail || r.status);
+    }
+  } catch (e) {
+    // Revert on network error
+    upBtn.classList.remove('active-up');
+    dnBtn.classList.remove('active-dn');
+    upBtn.disabled = false;
+    dnBtn.disabled = false;
+    console.error('Feedback network error:', e);
+  }
+}
+
+/* ── Clean answer text ─────────────────────────────────────────────────────── */
+function cleanAnswer(text) {
+  // Remove any accidental "Source N:" references Gemini might still output
+  return (text || '').replace(/Source\s+\d+:\s*/gi, '');
 }
 
 function doLogout() {

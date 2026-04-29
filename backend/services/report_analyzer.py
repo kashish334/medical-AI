@@ -7,25 +7,22 @@ Extracts text from PDF using PyMuPDF, sends images directly as base64 to Gemini.
 Supported formats: PDF, PNG, JPG, JPEG, WEBP
 """
 
-import os
 import base64
 import io
-from functools import lru_cache
 import google.generativeai as genai
 from dotenv import load_dotenv
+from .api_key_manager import get_key_manager, NoAvailableKeyError
 
 load_dotenv()
 
 GEMINI_MODEL = "gemini-2.5-flash"
 
 
-@lru_cache(maxsize=1)
 def _get_model():
-    api_key = os.getenv("GEMINI_API_KEY", "")
-    if not api_key:
-        raise EnvironmentError("GEMINI_API_KEY not set.")
-    genai.configure(api_key=api_key)
-    return genai.GenerativeModel(GEMINI_MODEL)
+    """Always gets a fresh model configured with the current active key."""
+    key = get_key_manager("gemini").get_active_key()
+    genai.configure(api_key=key)
+    return genai.GenerativeModel(GEMINI_MODEL), key
 
 
 def _extract_text_from_pdf(file_bytes: bytes) -> str:
@@ -126,14 +123,29 @@ def analyze_pdf(file_bytes: bytes, user_question: str = "") -> dict:
             "char_count": 0,
         }
 
-    model  = _get_model()
-    prompt = _build_report_prompt(extracted_text, user_question)
+    manager  = get_key_manager("gemini")
+    prompt   = _build_report_prompt(extracted_text, user_question)
+    analysis = "Error analyzing report: unknown error"
 
-    try:
-        response = model.generate_content(prompt)
-        analysis = response.text.strip()
-    except Exception as e:
-        analysis = f"Error analyzing report: {e}"
+    for _ in range(3):
+        try:
+            model, key = _get_model()
+            response   = model.generate_content(prompt)
+            analysis   = response.text.strip()
+            manager.record_usage(key, tokens_used=len(prompt) // 4)
+            break
+        except NoAvailableKeyError as e:
+            analysis = f"⚠️ All API keys exhausted: {e}"
+            break
+        except Exception as e:
+            msg = str(e).lower()
+            if "daily" in msg or "per day" in msg:
+                manager.mark_tpd_exceeded(key)
+            elif "rate" in msg or "quota" in msg or "429" in msg:
+                manager.mark_tpm_exceeded(key)
+            else:
+                analysis = f"Error analyzing report: {e}"
+                break
 
     return {
         "analysis":    analysis,
@@ -154,19 +166,33 @@ def analyze_image(file_bytes: bytes, mime_type: str, user_question: str = "") ->
     Returns:
         dict with keys: analysis (str), report_type (str)
     """
-    model  = _get_model()
-    prompt = _build_image_prompt(user_question)
-
+    manager    = get_key_manager("gemini")
+    prompt     = _build_image_prompt(user_question)
     image_part = {
         "mime_type": mime_type,
         "data":      base64.b64encode(file_bytes).decode("utf-8"),
     }
+    analysis = "Error analyzing image: unknown error"
 
-    try:
-        response = model.generate_content([prompt, image_part])
-        analysis = response.text.strip()
-    except Exception as e:
-        analysis = f"Error analyzing image: {e}"
+    for _ in range(3):
+        try:
+            model, key = _get_model()
+            response   = model.generate_content([prompt, image_part])
+            analysis   = response.text.strip()
+            manager.record_usage(key, tokens_used=500)
+            break
+        except NoAvailableKeyError as e:
+            analysis = f"⚠️ All API keys exhausted: {e}"
+            break
+        except Exception as e:
+            msg = str(e).lower()
+            if "daily" in msg or "per day" in msg:
+                manager.mark_tpd_exceeded(key)
+            elif "rate" in msg or "quota" in msg or "429" in msg:
+                manager.mark_tpm_exceeded(key)
+            else:
+                analysis = f"Error analyzing image: {e}"
+                break
 
     return {
         "analysis":    analysis,

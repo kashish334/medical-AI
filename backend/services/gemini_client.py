@@ -1,28 +1,70 @@
 """
 backend/services/gemini_client.py
 ----------------------------------
-Wrapper around Gemini API for RAG-based answer generation.
-Keeps prompt templates in one place.
+Wrapper around Gemini API with automatic multi-key rotation.
+
+Reads up to 3 keys from env:
+  GEMINI_API_KEY_1 / GEMINI_API_KEY_2 / GEMINI_API_KEY_3
+Falls back to legacy GEMINI_API_KEY for single-key setups.
+
+On TPM hit  → rotates to next key, retries once automatically.
+On TPD hit  → marks key as day-exhausted, rotates, retries once.
 """
 
-import os
-from functools import lru_cache
+import logging
 import google.generativeai as genai
-from dotenv import load_dotenv
+from .api_key_manager import get_key_manager, NoAvailableKeyError
 
-load_dotenv()
+logger = logging.getLogger(__name__)
 
-GEMINI_MODEL = "gemini-2.5-flash"
+GEMINI_MODEL      = "gemini-2.5-flash"
 MAX_CONTEXT_CHARS = 6000
 
 
-@lru_cache(maxsize=1)
-def _get_model():
-    api_key = os.getenv("GEMINI_API_KEY", "")
-    if not api_key:
-        raise EnvironmentError("GEMINI_API_KEY is not set in your .env file.")
-    genai.configure(api_key=api_key)
-    return genai.GenerativeModel(GEMINI_MODEL)
+def _is_tpm_error(exc: Exception) -> bool:
+    msg = str(exc).lower()
+    return any(s in msg for s in [
+        "resource_exhausted", "rate limit", "quota", "429",
+        "tokens per minute", "tpm", "too many requests",
+    ])
+
+def _is_tpd_error(exc: Exception) -> bool:
+    msg = str(exc).lower()
+    return any(s in msg for s in [
+        "daily limit", "tokens per day", "tpd", "daily quota",
+        "per day", "exceeded your daily",
+    ])
+
+
+def _call_gemini(prompt: str, max_retries: int = 3) -> str:
+    """Call Gemini with automatic key rotation on rate-limit errors."""
+    manager  = get_key_manager("gemini")
+    last_exc = None
+
+    for attempt in range(max_retries):
+        try:
+            key = manager.get_active_key()
+            genai.configure(api_key=key)
+            model    = genai.GenerativeModel(GEMINI_MODEL)
+            response = model.generate_content(prompt)
+            manager.record_usage(key, tokens_used=len(prompt) // 4)
+            return response.text.strip()
+
+        except NoAvailableKeyError:
+            raise
+
+        except Exception as exc:
+            last_exc = exc
+            if _is_tpd_error(exc):
+                logger.warning(f"[Gemini] TPD exceeded (attempt {attempt+1}), rotating key…")
+                manager.mark_tpd_exceeded(key)
+            elif _is_tpm_error(exc):
+                logger.warning(f"[Gemini] TPM exceeded (attempt {attempt+1}), rotating key…")
+                manager.mark_tpm_exceeded(key)
+            else:
+                raise
+
+    raise last_exc or RuntimeError("Gemini: max retries exceeded")
 
 
 def generate_answer(
@@ -30,36 +72,20 @@ def generate_answer(
     retrieved_contexts: list[str],
     conversation_history: list[dict] | None = None,
 ) -> str:
-    """
-    Generate a grounded answer using retrieved context + optional chat history.
-
-    Args:
-        question             : the user's current question
-        retrieved_contexts   : list of raw answers from FAISS (up to 3)
-        conversation_history : list of {"role": "user"|"assistant", "content": str}
-
-    Returns:
-        Gemini's synthesised answer as a plain string.
-    """
-    model = _get_model()
-
-    # Build the context block
     context_block = "\n\n---\n\n".join(
-        f"Source {i+1}:\n{ctx[:MAX_CONTEXT_CHARS // len(retrieved_contexts)]}"
+        f"Source {i+1}:\n{ctx[:MAX_CONTEXT_CHARS // max(len(retrieved_contexts), 1)]}"
         for i, ctx in enumerate(retrieved_contexts)
     )
 
-    # Build conversation history string
     history_str = ""
     if conversation_history:
-        recent = conversation_history[-6:]          # last 3 turns
+        recent = conversation_history[-6:]
         lines  = []
         for msg in recent:
             role = "Patient" if msg["role"] == "user" else "Assistant"
             lines.append(f"{role}: {msg['content']}")
         history_str = "\n".join(lines)
 
-    # Final prompt
     prompt = f"""You are a helpful, empathetic medical information assistant named MedAI.
 Your answers are grounded ONLY in the provided medical knowledge below.
 Do not invent information. If the knowledge base does not cover the question, say so clearly.
@@ -84,8 +110,13 @@ IMPORTANT FORMATTING RULES:
 Provide a clear, accurate, and well-structured answer. Do not reference source numbers anywhere."""
 
     try:
-        response = model.generate_content(prompt)
-        return response.text.strip()
+        return _call_gemini(prompt)
+    except NoAvailableKeyError as e:
+        return (
+            "⚠️ I'm temporarily unable to generate a response — all API quota is exhausted. "
+            "Please try again in a minute, or contact the administrator to add more API keys.\n\n"
+            f"Details: {e}"
+        )
     except Exception as e:
         return f"I'm sorry, I encountered an error generating the answer: {e}"
 

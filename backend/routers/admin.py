@@ -7,6 +7,7 @@ GET /admin/users             — all users summary with top disease + query coun
 GET /admin/users/{user_id}/diseases  — specific user's disease breakdown
 """
 
+import os
 from typing import Annotated
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
@@ -15,6 +16,7 @@ from ..db.database import get_db
 from ..db import crud
 from ..db.db_models import User
 from ..dependencies import get_admin_user
+from ..services.api_key_manager import get_key_manager
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -61,3 +63,24 @@ def get_user_diseases(
     _admin:  Annotated[User,    Depends(get_admin_user)],
 ):
     return crud.get_user_disease_breakdown(db, user_id)
+
+
+@router.get("/api-keys/status")
+def get_api_key_status(
+    _admin: Annotated[User, Depends(get_admin_user)],
+):
+    """
+    Returns the current status of all configured API keys for each provider.
+    Shows which keys are active, TPM/TPD status, and token counters.
+    Admin only.
+    """
+    result = {}
+    provider = os.getenv("AI_PROVIDER", "gemini").lower()
+    try:
+        result[provider] = get_key_manager(provider).status()
+    except Exception as e:
+        result[provider] = {"error": str(e)}
+    return {
+        "active_provider": provider,
+        "keys": result,
+    }
