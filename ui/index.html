@@ -416,8 +416,10 @@
 
 <script>
   const API = '';
-  let authToken = localStorage.getItem('medai_token') || '';
-  let currentUser = JSON.parse(localStorage.getItem('medai_user') || '{}');
+  localStorage.removeItem('medai_token');
+  localStorage.removeItem('medai_user');
+  let authToken = '';
+  let currentUser = {};
 
   function switchTab(tab) {
     document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', (tab==='login'?i===0:i===1)));
@@ -453,7 +455,7 @@
       const d = await r.json();
       if (r.ok) {
         authToken = d.access_token;
-        currentUser = {username: d.username, is_admin: d.is_admin};
+        currentUser = {username: d.username, is_admin: d.is_admin, email: d.email || ''};
         localStorage.setItem('medai_token', authToken);
         localStorage.setItem('medai_user', JSON.stringify(currentUser));
         showApp();
@@ -488,7 +490,7 @@
       const d = await r.json();
       if (r.status === 201) {
         authToken = d.access_token;
-        currentUser = {username: d.username, is_admin: d.is_admin};
+        currentUser = {username: d.username, is_admin: d.is_admin, email: document.getElementById('reg-email').value.trim()};
         localStorage.setItem('medai_token', authToken);
         localStorage.setItem('medai_user', JSON.stringify(currentUser));
         showApp();
@@ -504,7 +506,7 @@
 
   // Enter key support
   document.addEventListener('keydown', e => {
-    if (e.key === 'Enter') {
+    if (e.key === 'Enter' && document.getElementById('loginPage').style.display !== 'none') {
       if (document.getElementById('tab-login').classList.contains('active')) doLogin();
       else doRegister();
     }
@@ -523,24 +525,6 @@
   }
 </script>
 <script src="app.js"></script>
-<script>
-  // Auto-login after app.js is fully loaded
-  // Verify token is still valid before auto-login
-  if (authToken) {
-    fetch(`${API}/chat/sessions`, {
-      headers: { 'Authorization': `Bearer ${authToken}` }
-    }).then(r => {
-      if (r.ok) {
-        showApp();
-      } else {
-        localStorage.removeItem('medai_token');
-        localStorage.removeItem('medai_user');
-      }
-    }).catch(() => {
-      localStorage.removeItem('medai_token');
-      localStorage.removeItem('medai_user');
-    });
-}
-</script>
+
 </body>
 </html>

@@ -43,6 +43,7 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
     username: str
     is_admin: bool
+    email: str = ""
 
 
 # ── Chat ───────────────────────────────────────────────────────────────────────

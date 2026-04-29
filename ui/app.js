@@ -122,7 +122,7 @@ function getAppHTML() {
 
     /* ── Chat page ───────────────────────────────────────────────────────────── */
     .chat-wrap { display: flex; flex-direction: column; height: calc(100vh - 60px); }
-    .chat-messages { flex: 1; overflow-y: auto; padding: 24px 28px; display: flex; flex-direction: column; gap: 20px; }
+    .chat-messages { flex: 1; overflow-y: auto; padding: 24px 28px; display: flex; flex-direction: column; gap: 20px; position: relative; }
     .chat-input-area {
       padding: 16px 28px 20px;
       border-top: 1px solid var(--border);
@@ -198,9 +198,11 @@ function getAppHTML() {
     .fb-btn.active-dn { border-color: var(--danger); color: var(--danger); background: rgba(239,68,68,0.1); }
 
     .chat-empty {
-      flex: 1; display: flex; flex-direction: column;
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column;
       align-items: center; justify-content: center;
       color: var(--muted); text-align: center; padding: 40px;
+      pointer-events: none;
     }
     .chat-empty .empty-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.4; }
     .chat-empty h3 { font-size: 18px; font-weight: 600; color: var(--muted2); margin-bottom: 8px; }
@@ -413,7 +415,7 @@ function getAppHTML() {
         ${currentUser.is_admin ? `<div class="nav-item" onclick="showPage('admin')" id="nav-admin">
           <span class="nav-icon">🎛</span> Admin Dashboard
         </div>` : ''}
-        <div class="nav-item" onclick="doLogout()" style="margin-top:8px;">
+        <div class="nav-item" style="margin-top:8px;">
           <span class="nav-icon">⚙</span> Settings
         </div>
         <div class="nav-item" onclick="">
@@ -425,7 +427,7 @@ function getAppHTML() {
           <div class="user-avatar">${(currentUser.username||'U')[0].toUpperCase()}</div>
           <div>
             <div class="user-name">${currentUser.username}</div>
-            <div class="user-role">${currentUser.is_admin ? 'Chief Administrator' : 'Clinical User'}</div>
+            <div class="user-role">${currentUser.email || (currentUser.is_admin ? 'Chief Administrator' : 'Clinical User')}</div>
           </div>
         </div>
         <button class="logout-btn" onclick="doLogout()">← Sign out</button>
@@ -760,65 +762,49 @@ async function sendMessage() {
 }
 
 function renderMessages() {
-  const el = document.getElementById('chatMessages');
+  const el    = document.getElementById('chatMessages');
   const empty = document.getElementById('chatEmpty');
   if (!el) return;
 
-  if (messages.length === 0) {
-    if (empty) empty.style.display = 'flex';
-    // Remove all msg elements
-    el.querySelectorAll('.msg-user,.msg-bot').forEach(m => m.remove());
-    return;
-  }
-  if (empty) empty.style.display = 'none';
+  // Remove all existing message bubbles
+  el.querySelectorAll('.msg-user,.msg-bot,.loading-msg').forEach(m => m.remove());
 
-  el.querySelectorAll('.msg-user,.msg-bot').forEach(m => m.remove());
+  // Show or hide empty state
+  if (empty) empty.style.display = messages.length === 0 ? 'flex' : 'none';
+  if (messages.length === 0) return;
 
-  messages.forEach((msg, i) => {
+  messages.forEach((msg) => {
     if (msg.role === 'user') {
-      el.insertAdjacentHTML('beforeend', `
-        <div class="msg-user">
-          <div class="bubble">${escHtml(msg.content)}</div>
-        </div>
-      `);
+      const div = document.createElement('div');
+      div.className = 'msg-user';
+      div.innerHTML = `<div class="bubble">${escHtml(msg.content)}</div>`;
+      el.appendChild(div);
     } else {
       const conf    = ((msg.confidence||0)*100).toFixed(0);
       const cat     = (msg.category||'').replace(/_/g,' ');
       const lowWarn = msg.low_confidence;
       const mid     = msg.message_id;
-      el.insertAdjacentHTML('beforeend', `
-        <div class="msg-bot">
-          <div class="bot-avatar">⚕</div>
-          <div>
-            <div class="bubble">${markdownToHtml(msg.content)}</div>
-            <div class="msg-meta">
-              ${cat ? `<span class="cat-badge ${lowWarn?'warn':''}">${cat}</span>` : ''}
-              ${conf > 0 ? `<span class="conf-label">${conf}% confidence</span>` : ''}
-              ${mid ? `
-                <button class="fb-btn" id="up_${mid}" onclick="sendFeedback(${mid},1,'up_${mid}','dn_${mid}')">👍</button>
-                <button class="fb-btn" id="dn_${mid}" onclick="sendFeedback(${mid},-1,'up_${mid}','dn_${mid}')">👎</button>
-              ` : ''}
-            </div>
+      const div     = document.createElement('div');
+      div.className = 'msg-bot';
+      div.innerHTML = `
+        <div class="bot-avatar">⚕</div>
+        <div>
+          <div class="bubble">${markdownToHtml(cleanAnswer(msg.content))}</div>
+          <div class="msg-meta">
+            ${cat ? `<span class="cat-badge ${lowWarn?'warn':''}">${cat}</span>` : ''}
+            ${conf > 0 ? `<span class="conf-label">${conf}% confidence</span>` : ''}
+            ${mid ? `
+              <button class="fb-btn" id="up_${mid}" onclick="sendFeedback(${mid},1,'up_${mid}','dn_${mid}')">👍</button>
+              <button class="fb-btn" id="dn_${mid}" onclick="sendFeedback(${mid},-1,'up_${mid}','dn_${mid}')">👎</button>
+            ` : ''}
           </div>
-        </div>
-      `);
+        </div>`;
+      el.appendChild(div);
     }
   });
+
   el.scrollTop = el.scrollHeight;
 }
-
-async function sendFeedback(msgId, rating, upId, dnId) {
-  try {
-    await fetch(`${API}/chat/feedback`, {
-      method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':`Bearer ${authToken}`},
-      body: JSON.stringify({ session_id:sessionId, message_id:msgId, rating })
-    });
-    document.getElementById(upId)?.classList.toggle('active-up', rating===1);
-    document.getElementById(dnId)?.classList.toggle('active-dn', rating===-1);
-  } catch{}
-}
-
 async function loadPastSessions() {
   // Sessions displayed in sidebar search area - kept minimal for the design
 }

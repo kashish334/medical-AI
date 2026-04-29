@@ -25,7 +25,7 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)):
 
     user  = crud.create_user(db, payload.username, payload.email, payload.password)
     token = create_access_token({"sub": user.username})
-    return TokenResponse(access_token=token, username=user.username, is_admin=user.is_admin)
+    return TokenResponse(access_token=token, username=user.username, is_admin=user.is_admin, email=user.email)
 
 
 @router.post("/login", response_model=TokenResponse)
