@@ -5,7 +5,8 @@ function getAppHTML() {
   return `
   <style>
     /* ── App shell ───────────────────────────────────────────────────────────── */
-    #app { display:grid; grid-template-columns:260px 1fr; height:100vh; font-family:'Sora',sans-serif; background:var(--bg-deep); }
+    #app { display:grid; grid-template-columns:260px 1fr; height:100vh; font-family:'Sora',sans-serif; background:var(--bg-deep); transition: grid-template-columns 0.3s ease; }
+    #app.sidebar-collapsed { grid-template-columns: 0px 1fr; }
 
     /* ── Sidebar ─────────────────────────────────────────────────────────────── */
     .sidebar {
@@ -15,7 +16,27 @@ function getAppHTML() {
       height: 100vh;
       overflow: hidden;
       padding: 0;
+      transition: width 0.3s ease, opacity 0.3s ease;
+      width: 260px;
     }
+    #app.sidebar-collapsed .sidebar {
+      width: 0; opacity: 0; border-right: none; pointer-events: none;
+    }
+
+    /* Toggle button — always visible, floats over content */
+    .sidebar-toggle-btn {
+      position: fixed; top: 14px; left: 14px; z-index: 1000;
+      width: 34px; height: 34px; border-radius: 9px;
+      background: var(--bg-card); border: 1px solid var(--border-2);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; font-size: 16px; color: var(--muted2);
+      transition: all 0.2s; box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+    .sidebar-toggle-btn:hover { border-color: var(--blue); color: var(--blue-bright); background: var(--bg-input); }
+
+    /* Shift top-bar title right when sidebar open so it doesn't clash with toggle */
+    .top-bar { padding-left: 50px; transition: padding-left 0.3s ease; }
+    #app.sidebar-collapsed .top-bar { padding-left: 50px; }
 
     .sidebar-brand {
       padding: 20px 20px 16px;
@@ -149,6 +170,153 @@ function getAppHTML() {
       transition: all 0.15s;
     }
     .icon-btn:hover { border-color: var(--blue); color: var(--blue-bright); }
+    .icon-btn.has-badge { position: relative; }
+    .icon-btn .badge {
+      position: absolute; top: -4px; right: -4px;
+      background: var(--danger); color: white;
+      font-size: 9px; font-weight: 700; font-family: 'Sora', sans-serif;
+      min-width: 16px; height: 16px; border-radius: 99px;
+      display: flex; align-items: center; justify-content: center;
+      border: 2px solid var(--bg-deep); padding: 0 3px;
+    }
+
+    /* ── Dropdown panels ────────────────────────────────────────────────── */
+    .dropdown-panel {
+      position: absolute; top: 54px; right: 0;
+      width: 340px; background: var(--bg-card);
+      border: 1px solid var(--border-2); border-radius: 14px;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+      z-index: 999; overflow: hidden;
+      animation: dropIn 0.18s ease;
+    }
+    @keyframes dropIn {
+      from { opacity:0; transform: translateY(-8px); }
+      to   { opacity:1; transform: translateY(0); }
+    }
+    .dropdown-panel.hidden { display: none; }
+    .dp-header {
+      padding: 14px 16px 10px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .dp-header h3 { font-size: 13px; font-weight: 700; margin: 0; }
+    .dp-header-action {
+      font-size: 11px; color: var(--blue); cursor: pointer;
+      background: none; border: none; font-family: 'Sora', sans-serif;
+      padding: 0;
+    }
+    .dp-header-action:hover { text-decoration: underline; }
+
+    /* Notification items */
+    .notif-item {
+      display: flex; gap: 12px; align-items: flex-start;
+      padding: 12px 16px; border-bottom: 1px solid var(--border);
+      transition: background 0.15s; cursor: pointer;
+    }
+    .notif-item:last-child { border-bottom: none; }
+    .notif-item:hover { background: rgba(255,255,255,0.03); }
+    .notif-item.unread { background: rgba(59,130,246,0.05); }
+    .notif-icon {
+      width: 34px; height: 34px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; flex-shrink: 0;
+    }
+    .notif-icon.blue  { background: rgba(59,130,246,0.15); }
+    .notif-icon.green { background: rgba(45,212,191,0.15); }
+    .notif-icon.red   { background: rgba(239,68,68,0.15); }
+    .notif-icon.amber { background: rgba(251,191,36,0.12); }
+    .notif-body { flex: 1; min-width: 0; }
+    .notif-title { font-size: 12px; font-weight: 600; margin-bottom: 2px; color: var(--text); }
+    .notif-desc  { font-size: 11px; color: var(--muted); line-height: 1.5; }
+    .notif-time  { font-size: 10px; color: var(--muted); margin-top: 3px; }
+    .notif-dot   {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--blue); flex-shrink: 0; margin-top: 6px;
+    }
+    .notif-empty {
+      padding: 28px 16px; text-align: center;
+      font-size: 12px; color: var(--muted); line-height: 1.8;
+    }
+
+    /* Help panel */
+    .help-section { padding: 8px 0; border-bottom: 1px solid var(--border); }
+    .help-section:last-child { border-bottom: none; }
+    .help-section-label {
+      font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--muted); padding: 6px 16px 4px;
+    }
+    .help-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 9px 16px; cursor: pointer;
+      transition: background 0.15s; border-radius: 0;
+    }
+    .help-item:hover { background: rgba(255,255,255,0.04); }
+    .help-item-icon {
+      width: 30px; height: 30px; border-radius: 8px;
+      background: var(--bg-input); display: flex; align-items: center;
+      justify-content: center; font-size: 14px; flex-shrink: 0;
+    }
+    .help-item-body { flex: 1; }
+    .help-item-title { font-size: 12px; font-weight: 600; color: var(--text); }
+    .help-item-desc  { font-size: 10px; color: var(--muted); margin-top: 1px; }
+    .help-item-arrow { color: var(--muted); font-size: 12px; }
+    .shortcut-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 7px 16px;
+    }
+    .shortcut-label { font-size: 11px; color: var(--muted2); }
+    .shortcut-keys  { display: flex; gap: 4px; }
+    .kbd {
+      background: var(--bg-input); border: 1px solid var(--border-2);
+      border-radius: 4px; padding: 1px 6px;
+      font-size: 10px; color: var(--muted2); font-family: monospace;
+    }
+
+    /* Profile panel */
+    .profile-hero {
+      padding: 16px; display: flex; gap: 12px; align-items: center;
+      border-bottom: 1px solid var(--border);
+    }
+    .profile-avatar-lg {
+      width: 46px; height: 46px; border-radius: 14px;
+      background: linear-gradient(135deg, var(--blue), #7c3aed);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; font-weight: 700; color: white; flex-shrink: 0;
+    }
+    .profile-info-name  { font-size: 14px; font-weight: 700; }
+    .profile-info-email { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .profile-info-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: rgba(45,212,191,0.12); color: var(--teal);
+      border-radius: 6px; padding: 2px 8px;
+      font-size: 10px; font-weight: 600; margin-top: 4px;
+    }
+    .profile-stat-row {
+      display: flex; padding: 12px 16px; gap: 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .profile-stat {
+      flex: 1; text-align: center;
+      border-right: 1px solid var(--border);
+    }
+    .profile-stat:last-child { border-right: none; }
+    .profile-stat-val { font-size: 18px; font-weight: 700; color: var(--blue-bright); }
+    .profile-stat-lbl { font-size: 10px; color: var(--muted); margin-top: 2px; }
+    .profile-menu-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 16px; cursor: pointer; transition: background 0.15s;
+    }
+    .profile-menu-item:hover { background: rgba(255,255,255,0.04); }
+    .profile-menu-icon { font-size: 15px; width: 20px; text-align: center; }
+    .profile-menu-label { font-size: 12px; color: var(--muted2); flex: 1; }
+    .profile-menu-item.danger .profile-menu-label { color: var(--danger); }
+    .profile-menu-item.danger:hover { background: rgba(239,68,68,0.08); }
+
+    /* Overlay to close dropdowns */
+    #dropdownOverlay {
+      display: none; position: fixed; inset: 0; z-index: 998;
+    }
+
     .export-btn {
       display: flex; align-items: center; gap: 8px;
       background: var(--blue); color: white;
@@ -158,6 +326,132 @@ function getAppHTML() {
       transition: background 0.2s;
     }
     .export-btn:hover { background: #2563eb; }
+
+    /* ── Settings page ───────────────────────────────────────────────────── */
+    .settings-layout {
+      display: grid; grid-template-columns: 200px 1fr;
+      gap: 0; height: 100%;
+    }
+    .settings-nav {
+      border-right: 1px solid var(--border);
+      padding: 20px 12px; display: flex; flex-direction: column; gap: 2px;
+    }
+    .settings-nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 12px; border-radius: 9px; cursor: pointer;
+      font-size: 12px; font-weight: 500; color: var(--muted2); transition: all 0.15s;
+    }
+    .settings-nav-item:hover { background: rgba(255,255,255,0.05); color: var(--text); }
+    .settings-nav-item.active { background: rgba(59,130,246,0.12); color: var(--blue-bright); }
+    .settings-nav-icon { font-size: 15px; width: 20px; text-align: center; }
+
+    .settings-body { overflow-y: auto; padding: 28px 32px; }
+    .settings-section { display: none; }
+    .settings-section.active { display: block; }
+    .settings-section-heading {
+      font-size: 16px; font-weight: 800; margin-bottom: 16px; letter-spacing: -0.01em;
+    }
+
+    .settings-group {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 14px; margin-bottom: 20px; overflow: hidden;
+    }
+    .settings-group-title {
+      font-size: 10px; font-weight: 700; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--muted);
+      padding: 12px 18px 8px; border-bottom: 1px solid var(--border);
+    }
+    .settings-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 18px; border-bottom: 1px solid var(--border); gap: 16px;
+    }
+    .settings-row:last-child { border-bottom: none; }
+    .settings-row-info { flex: 1; }
+    .settings-row-label { font-size: 13px; font-weight: 600; color: var(--text); }
+    .settings-row-desc  { font-size: 11px; color: var(--muted); margin-top: 3px; line-height: 1.5; }
+
+    /* Toggle */
+    .toggle-wrap { position: relative; flex-shrink: 0; }
+    .toggle-input { opacity: 0; width: 0; height: 0; position: absolute; }
+    .toggle-slider {
+      display: block; width: 42px; height: 24px;
+      background: var(--bg-input); border: 1px solid var(--border-2);
+      border-radius: 999px; cursor: pointer; transition: all 0.25s; position: relative;
+    }
+    .toggle-slider::after {
+      content: ''; position: absolute; top: 3px; left: 3px;
+      width: 16px; height: 16px; background: var(--muted); border-radius: 50%; transition: all 0.25s;
+    }
+    .toggle-input:checked + .toggle-slider { background: var(--blue); border-color: var(--blue); }
+    .toggle-input:checked + .toggle-slider::after { left: 21px; background: white; }
+
+    /* Select */
+    .settings-select {
+      background: var(--bg-input); border: 1px solid var(--border-2);
+      border-radius: 8px; padding: 7px 30px 7px 12px;
+      font-size: 12px; color: var(--text); font-family: 'Sora', sans-serif;
+      cursor: pointer; outline: none; min-width: 150px; appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 10px center;
+    }
+    .settings-select option { background: #1e2535; }
+    .settings-select:focus { border-color: var(--blue); }
+
+    /* Slider */
+    .settings-slider {
+      -webkit-appearance: none; width: 160px; height: 4px;
+      background: var(--border-2); border-radius: 2px; outline: none; accent-color: var(--blue);
+    }
+    .settings-slider::-webkit-slider-thumb {
+      -webkit-appearance: none; width: 16px; height: 16px;
+      border-radius: 50%; background: var(--blue); cursor: pointer;
+    }
+    .slider-row { display: flex; align-items: center; gap: 10px; }
+    .slider-val { font-size: 12px; font-weight: 700; color: var(--blue-bright); min-width: 36px; text-align: right; }
+
+    /* Buttons */
+    .settings-btn {
+      padding: 8px 16px; border-radius: 8px; font-size: 12px;
+      font-weight: 600; cursor: pointer; border: none;
+      font-family: 'Sora', sans-serif; transition: all 0.2s; flex-shrink: 0;
+    }
+    .settings-btn.danger { background: rgba(239,68,68,0.1); color: var(--danger); border: 1px solid rgba(239,68,68,0.3); }
+    .settings-btn.danger:hover { background: rgba(239,68,68,0.2); }
+    .settings-btn.primary { background: var(--blue); color: white; }
+    .settings-btn.primary:hover { background: #2563eb; }
+    .settings-btn.secondary { background: var(--bg-input); color: var(--muted2); border: 1px solid var(--border-2); }
+    .settings-btn.secondary:hover { border-color: var(--blue); color: var(--text); }
+
+    /* About */
+    .about-card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 14px; padding: 28px; text-align: center; margin-bottom: 16px;
+    }
+    .about-logo { font-size: 44px; margin-bottom: 10px; }
+    .about-name  { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; }
+    .about-ver   { font-size: 12px; color: var(--muted); margin-top: 4px; }
+    .about-pills { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+    .about-pill  { background: var(--bg-input); border: 1px solid var(--border-2); border-radius: 999px; padding: 4px 12px; font-size: 11px; color: var(--muted2); }
+
+    /* Emergency */
+    .emergency-contact { display: flex; align-items: center; gap: 14px; padding: 14px 18px; border-bottom: 1px solid var(--border); }
+    .emergency-contact:last-child { border-bottom: none; }
+    .emergency-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+    .emergency-body { flex: 1; }
+    .emergency-name { font-size: 13px; font-weight: 600; }
+    .emergency-num  { font-size: 22px; font-weight: 800; color: var(--danger); letter-spacing: 0.05em; margin: 2px 0; }
+    .emergency-desc { font-size: 11px; color: var(--muted); }
+
+    /* Support */
+    .support-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+    .support-card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 14px; padding: 20px; cursor: pointer; transition: border-color 0.15s;
+    }
+    .support-card:hover { border-color: var(--blue); }
+    .support-card-icon  { font-size: 28px; margin-bottom: 10px; }
+    .support-card-title { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+    .support-card-desc  { font-size: 12px; color: var(--muted); line-height: 1.6; }
 
     .page-content { flex: 1; overflow-y: auto; padding: 28px; }
 
@@ -438,11 +732,22 @@ function getAppHTML() {
   </style>
 
   <div id="app">
+    <!-- Sidebar toggle button (always visible) -->
+    <button class="sidebar-toggle-btn" onclick="toggleSidebar()" id="sidebarToggleBtn" title="Toggle sidebar">☰</button>
+
     <!-- Sidebar -->
     <div class="sidebar">
       <div class="sidebar-brand">
-        <div class="b-title">MedAI Core</div>
-        <div class="b-sub">Clinical Decision Support</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div>
+            <div class="b-title">MedAI Core</div>
+            <div class="b-sub">Clinical Decision Support</div>
+          </div>
+          <div onclick="toggleSidebar()" title="Hide sidebar"
+            style="cursor:pointer;width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:14px;transition:all .15s;"
+            onmouseover="this.style.background='rgba(255,255,255,0.07)';this.style.color='var(--text)'"
+            onmouseout="this.style.background='transparent';this.style.color='var(--muted)'">✕</div>
+        </div>
       </div>
 
       <div class="sidebar-new-chat">
@@ -464,10 +769,10 @@ function getAppHTML() {
         ${currentUser.is_admin ? `<div class="nav-item" onclick="showPage('admin')" id="nav-admin">
           <span class="nav-icon">🎛</span> Admin Dashboard
         </div>` : ''}
-        <div class="nav-item" style="margin-top:4px;">
+        <div class="nav-item" style="margin-top:4px;" onclick="showPage('settings')" id="nav-settings">
           <span class="nav-icon">⚙</span> Settings
         </div>
-        <div class="nav-item">
+        <div class="nav-item" onclick="showPage('support')" id="nav-support">
           <span class="nav-icon">❓</span> Support
         </div>
       </div>
@@ -493,9 +798,180 @@ function getAppHTML() {
           <div class="top-bar-sub" id="pageSub">AI-powered medical question answering</div>
         </div>
         <div class="top-bar-right">
-          <div class="icon-btn" title="Notifications">🔔</div>
-          <div class="icon-btn" title="Help">❓</div>
-          <div class="icon-btn" title="Profile">👤</div>
+          <!-- Notification button -->
+          <div style="position:relative;">
+            <div class="icon-btn has-badge" title="Notifications" onclick="toggleDropdown('notifPanel')" id="notifBtn">
+              🔔
+              <span class="badge" id="notifBadge">3</span>
+            </div>
+            <div class="dropdown-panel hidden" id="notifPanel">
+              <div class="dp-header">
+                <h3>🔔 Notifications</h3>
+                <button class="dp-header-action" onclick="markAllRead()">Mark all read</button>
+              </div>
+              <div id="notifList">
+                <div class="notif-item unread" onclick="markRead(this, 'chat')">
+                  <div class="notif-icon blue">💬</div>
+                  <div class="notif-body">
+                    <div class="notif-title">New chat session started</div>
+                    <div class="notif-desc">Your last session had 8 messages. Start a new chat anytime.</div>
+                    <div class="notif-time">Just now</div>
+                  </div>
+                  <div class="notif-dot"></div>
+                </div>
+                <div class="notif-item unread" onclick="markRead(this, 'feedback')">
+                  <div class="notif-icon green">👍</div>
+                  <div class="notif-body">
+                    <div class="notif-title">Feedback recorded</div>
+                    <div class="notif-desc">Thanks for rating the last response. Your feedback helps improve MedAI.</div>
+                    <div class="notif-time">5 mins ago</div>
+                  </div>
+                  <div class="notif-dot"></div>
+                </div>
+                <div class="notif-item unread" onclick="markRead(this, 'tip')">
+                  <div class="notif-icon amber">💡</div>
+                  <div class="notif-body">
+                    <div class="notif-title">Tip: Upload a report</div>
+                    <div class="notif-desc">Try the Report Analyzer to get AI explanations of your medical documents.</div>
+                    <div class="notif-time">Today</div>
+                  </div>
+                  <div class="notif-dot"></div>
+                </div>
+                <div class="notif-item" onclick="markRead(this, 'update')">
+                  <div class="notif-icon blue">🔄</div>
+                  <div class="notif-body">
+                    <div class="notif-title">System updated</div>
+                    <div class="notif-desc">MedAI was updated with improved answer quality and multi-key API support.</div>
+                    <div class="notif-time">Yesterday</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Help button -->
+          <div style="position:relative;">
+            <div class="icon-btn" title="Help" onclick="toggleDropdown('helpPanel')" id="helpBtn">❓</div>
+            <div class="dropdown-panel hidden" id="helpPanel" style="width:320px;">
+              <div class="dp-header">
+                <h3>❓ Help &amp; Resources</h3>
+              </div>
+              <div class="help-section">
+                <div class="help-section-label">Quick Actions</div>
+                <div class="help-item" onclick="closeDropdowns(); showPage('chat'); newChat();">
+                  <div class="help-item-icon">✏️</div>
+                  <div class="help-item-body">
+                    <div class="help-item-title">New Chat</div>
+                    <div class="help-item-desc">Start a fresh medical Q&amp;A session</div>
+                  </div>
+                  <span class="help-item-arrow">›</span>
+                </div>
+                <div class="help-item" onclick="closeDropdowns(); showPage('report');">
+                  <div class="help-item-icon">📊</div>
+                  <div class="help-item-body">
+                    <div class="help-item-title">Analyze a Report</div>
+                    <div class="help-item-desc">Upload PDF or image medical reports for AI analysis</div>
+                  </div>
+                  <span class="help-item-arrow">›</span>
+                </div>
+                <div class="help-item" onclick="closeDropdowns(); exportData();">
+                  <div class="help-item-icon">⬇️</div>
+                  <div class="help-item-body">
+                    <div class="help-item-title">Export Chat as PDF</div>
+                    <div class="help-item-desc">Download the current conversation</div>
+                  </div>
+                  <span class="help-item-arrow">›</span>
+                </div>
+              </div>
+              <div class="help-section">
+                <div class="help-section-label">Keyboard Shortcuts</div>
+                <div class="shortcut-row">
+                  <span class="shortcut-label">Send message</span>
+                  <div class="shortcut-keys"><span class="kbd">Enter</span></div>
+                </div>
+                <div class="shortcut-row">
+                  <span class="shortcut-label">New line in message</span>
+                  <div class="shortcut-keys"><span class="kbd">Shift</span><span class="kbd">Enter</span></div>
+                </div>
+                <div class="shortcut-row">
+                  <span class="shortcut-label">New chat</span>
+                  <div class="shortcut-keys"><span class="kbd">Ctrl</span><span class="kbd">N</span></div>
+                </div>
+              </div>
+              <div class="help-section">
+                <div class="help-section-label">About MedAI</div>
+                <div class="help-item" onclick="">
+                  <div class="help-item-icon">📚</div>
+                  <div class="help-item-body">
+                    <div class="help-item-title">Powered by MedQuAD + Gemini 2.5 Flash</div>
+                    <div class="help-item-desc">Answers are grounded in verified medical datasets. Always consult a qualified doctor.</div>
+                  </div>
+                </div>
+                <div class="help-item" onclick="">
+                  <div class="help-item-icon">🛡️</div>
+                  <div class="help-item-body">
+                    <div class="help-item-title">Emergency: Call 112</div>
+                    <div class="help-item-desc">For life-threatening emergencies, call emergency services immediately</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Profile button -->
+          <div style="position:relative;">
+            <div class="icon-btn" title="Profile" onclick="toggleDropdown('profilePanel')" id="profileBtn">👤</div>
+            <div class="dropdown-panel hidden" id="profilePanel" style="width:280px;">
+              <div class="profile-hero">
+                <div class="profile-avatar-lg" id="dpAvatarLetter">K</div>
+                <div>
+                  <div class="profile-info-name" id="dpName">kashish</div>
+                  <div class="profile-info-email" id="dpEmail">Clinical User</div>
+                  <div class="profile-info-badge" id="dpRole">✅ Active</div>
+                </div>
+              </div>
+              <div class="profile-stat-row">
+                <div class="profile-stat">
+                  <div class="profile-stat-val" id="dpSessions">—</div>
+                  <div class="profile-stat-lbl">Sessions</div>
+                </div>
+                <div class="profile-stat">
+                  <div class="profile-stat-val" id="dpMessages">—</div>
+                  <div class="profile-stat-lbl">Messages</div>
+                </div>
+                <div class="profile-stat">
+                  <div class="profile-stat-val" id="dpReports">—</div>
+                  <div class="profile-stat-lbl">Reports</div>
+                </div>
+              </div>
+              <div style="padding: 4px 0;">
+                <div class="profile-menu-item" onclick="closeDropdowns(); showPage('chat');">
+                  <span class="profile-menu-icon">💬</span>
+                  <span class="profile-menu-label">My Chats</span>
+                  <span style="color:var(--muted); font-size:12px;">›</span>
+                </div>
+                <div class="profile-menu-item" onclick="closeDropdowns(); showPage('report');">
+                  <span class="profile-menu-icon">📊</span>
+                  <span class="profile-menu-label">Report Analyzer</span>
+                  <span style="color:var(--muted); font-size:12px;">›</span>
+                </div>
+                ${currentUser.is_admin ? `<div class="profile-menu-item" onclick="closeDropdowns(); showPage('admin');">
+                  <span class="profile-menu-icon">🎛</span>
+                  <span class="profile-menu-label">Admin Dashboard</span>
+                  <span style="color:var(--muted); font-size:12px;">›</span>
+                </div>` : ''}
+                <div style="height:1px; background:var(--border); margin: 4px 0;"></div>
+                <div class="profile-menu-item danger" onclick="doLogout()">
+                  <span class="profile-menu-icon">🚪</span>
+                  <span class="profile-menu-label">Sign Out</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Overlay to catch outside clicks -->
+          <div id="dropdownOverlay" onclick="closeDropdowns()"></div>
+
           <div style="width:1px; height:24px; background:var(--border); margin:0 4px;"></div>
           <button class="export-btn" onclick="exportData()">⬇ Export PDF</button>
         </div>
@@ -647,6 +1123,476 @@ function getAppHTML() {
         </div>
       </div>
 
+      <!-- Settings Page -->
+      <div class="page" id="page-settings" style="overflow:hidden; height:calc(100vh - 60px);">
+        <div class="settings-layout">
+          <!-- Settings sidebar nav -->
+          <div class="settings-nav">
+            ${['appearance','chat','notifications','privacy','accessibility','medical','about'].map((s,i) => {
+              const icons = ['🎨','💬','🔔','🔒','♿','🩺','ℹ️'];
+              const labels = ['Appearance','Chat','Notifications','Privacy & Data','Accessibility','Medical','About'];
+              return `<div class="settings-nav-item ${i===0?'active':''}" onclick="switchSettingsTab('${s}')" id="stab-${s}">
+                <span class="settings-nav-icon">${icons[i]}</span> ${labels[i]}
+              </div>`;
+            }).join('')}
+          </div>
+
+          <!-- Settings content -->
+          <div class="settings-body" id="settingsBody">
+
+            <!-- APPEARANCE -->
+            <div class="settings-section active" id="sec-appearance">
+              <div class="settings-section-heading">🎨 Appearance</div>
+              <div class="settings-group">
+                <div class="settings-group-title">Theme</div>
+                <div class="settings-row">
+                  <div class="settings-row-info">
+                    <div class="settings-row-label">Color Theme</div>
+                    <div class="settings-row-desc">Choose your preferred color scheme</div>
+                  </div>
+                  <select class="settings-select" id="s-theme" onchange="applySetting('theme',this.value)">
+                    <option value="dark">🌙 Dark</option>
+                    <option value="darker">⚫ Darker</option>
+                    <option value="midnight">🔵 Midnight Blue</option>
+                  </select>
+                </div>
+                <div class="settings-row">
+                  <div class="settings-row-info">
+                    <div class="settings-row-label">Accent Color</div>
+                    <div class="settings-row-desc">Main highlight color used across the UI</div>
+                  </div>
+                  <div style="display:flex;gap:8px;">
+                    ${[['#3b82f6','Blue'],['#14b8a6','Teal'],['#8b5cf6','Purple'],['#f59e0b','Amber'],['#ef4444','Red']].map(([c,n]) =>
+                      `<div title="${n}" style="width:26px;height:26px;border-radius:8px;background:${c};cursor:pointer;border:2px solid transparent;transition:all .15s;"
+                        id="accent-${c.slice(1)}"
+                        onclick="setAccent('${c}')"></div>`
+                    ).join('')}
+                  </div>
+                </div>
+              </div>
+              <div class="settings-group">
+                <div class="settings-group-title">Chat Display</div>
+                <div class="settings-row">
+                  <div class="settings-row-info">
+                    <div class="settings-row-label">Font Size</div>
+                    <div class="settings-row-desc">Size of text in chat bubbles</div>
+                  </div>
+                  <select class="settings-select" id="s-fontsize" onchange="applySetting('fontsize',this.value)">
+                    <option value="small">Small (12px)</option>
+                    <option value="medium" selected>Medium (14px)</option>
+                    <option value="large">Large (16px)</option>
+                    <option value="xlarge">Extra Large (18px)</option>
+                  </select>
+                </div>
+                <div class="settings-row">
+                  <div class="settings-row-info">
+                    <div class="settings-row-label">Bubble Style</div>
+                    <div class="settings-row-desc">Visual style of message bubbles</div>
+                  </div>
+                  <select class="settings-select" id="s-bubble" onchange="applySetting('bubble',this.value)">
+                    <option value="rounded">Rounded</option>
+                    <option value="compact">Compact</option>
+                    <option value="minimal">Minimal (no background)</option>
+                  </select>
+                </div>
+                <div class="settings-row">
+                  <div class="settings-row-info">
+                    <div class="settings-row-label">Sidebar Width</div>
+                    <div class="settings-row-desc">Width of the left navigation panel</div>
+                  </div>
+                  <select class="settings-select" id="s-sidebar" onchange="applySetting('sidebar',this.value)">
+                    <option value="compact">Compact (220px)</option>
+                    <option value="normal" selected>Normal (260px)</option>
+                    <option value="wide">Wide (300px)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- CHAT PREFERENCES -->
+            <div class="settings-section" id="sec-chat">
+              <div class="settings-section-heading">💬 Chat Preferences</div>
+              <div class="settings-group">
+                <div class="settings-group-title">Behaviour</div>
+                <div class="settings-row">
+                  <div class="settings-row-info">
+                    <div class="settings-row-label">Send on Enter</div>
+                    <div class="settings-row-desc">Press Enter to send. Use Shift+Enter for a new line.</div>
+                  </div>
+                  <label class="toggle-wrap">
+                    <input type="checkbox" class="toggle-input" id="s-enterSend" checked onchange="applySetting('enterSend',this.checked)">
+                    <span class="toggle-slider"></span>
+                  </label>
+                </div>
+                <div class="settings-row">
+                  <div class="settings-row-info">
+                    <div class="settings-row-label">Auto-scroll to New Messages</div>
+                    <div class="settings-row-desc">Automatically scroll down when a new response arrives</div>
+                  </div>
+                  <label class="toggle-wrap">
+                    <input type="checkbox" class="toggle-input" id="s-autoScroll" checked onchange="applySetting('autoScroll',this.checked)">
+                    <span class="toggle-slider"></span>
+                  </label>
+                </div>
+                <div class="settings-row">
+                  <div class="settings-row-info">
+                    <div class="settings-row-label">Typing / Loading Indicator</div>
+                    <div class="settings-row-desc">Show skeleton animation while waiting for AI response</div>
+                  </div>
+                  <label class="toggle-wrap">
+                    <input type="checkbox" class="toggle-input" id="s-skeleton" checked onchange="applySetting('skeleton',this.checked)">
+                    <span class="toggle-slider"></span>
+                  </label>
+                </div>
+              </div>
+              <div class="settings-group">
+                <div class="settings-group-title">Metadata Display</div>
+                <div class="settings-row">
+                  <div class="settings-row-info">
+                    <div class="settings-row-label">Show Confidence Score</div>
+                    <div class="settings-row-desc">Display the AI confidence % badge below each answer</div>
+                  </div>
+                  <label class="toggle-wrap">
+                    <input type="checkbox" class="toggle-input" id="s-confidence" checked onchange="applySetting('confidence',this.checked)">
+                    <span class="toggle-slider"></span>
+                  </label>
+                </div>
+                <div class="settings-row">
+                  <div class="settings-row-info">
+                    <div class="settings-row-label">Show Category Badge</div>
+                    <div class="settings-row-desc">Show the disease category tag (e.g. SeniorHealth, Cancer)</div>
+                  </div>
+                  <label class="toggle-wrap">
+                    <input type="checkbox" class="toggle-input" id="s-category" checked onchange="applySetting('category',this.checked)">
+                    <span class="toggle-slider"></span>
+                  </label>
+                </div>
+              </div>
+              <div class="settings-group">
+                <div class="settings-group-title">Response Language</div>
+                <div class="settings-row">
+                  <div class="settings-row-info">
+                    <div class="settings-row-label">Answer Language</div>
+                    <div class="settings-row-desc">AI will respond in your chosen language (Gemini handles translation)</div>
+                  </div>
+                  <select class="settings-select" id="s-language" onchange="applySetting('language',this.value)">
+                    <option value="english">🇬🇧 English</option>
+                    <option value="hindi">🇮🇳 Hindi</option>
+                    <option value="gujarati">🇮🇳 Gujarati</option>
+                    <option value="marathi">🇮🇳 Marathi</option>
+                    <option value="tamil">🇮🇳 Tamil</option>
+                    <option value="bengali">🇮🇳 Bengali</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- NOTIFICATIONS -->
+            <div class="settings-section" id="sec-notifications">
+              <div class="settings-section-heading">🔔 Notifications</div>
+              <div class="settings-group">
+                <div class="settings-group-title">In-App Notifications</div>
+                <div class="settings-row">
+                  <div class="settings-row-info">
+                    <div class="settings-row-label">Session Notifications</div>
+                    <div class="settings-row-desc">Alert when a new chat session is started</div>
+                  </div>
+                  <label class="toggle-wrap">
+                    <input type="checkbox" class="toggle-input" id="s-notifSession" checked onchange="applySetting('notifSession',this.checked)">
+                    <span class="toggle-slider"></span>
+                  </label>
+                </div>
+                <div class="settings-row">
+                  <div class="settings-row-info">
+                    <div class="settings-row-label">Feedback Reminders</div>
+                    <div class="settings-row-desc">Remind you to rate AI responses with 👍/👎</div>
+                  </div>
+                  <label class="toggle-wrap">
+                    <input type="checkbox" class="toggle-input" id="s-notifFeedback" checked onchange="applySetting('notifFeedback',this.checked)">
+                    <span class="toggle-slider"></span>
+                  </label>
+                </div>
+                <div class="settings-row">
+                  <div class="settings-row-info">
+                    <div class="settings-row-label">Tips &amp; Updates</div>
+                    <div class="settings-row-desc">Show product tips and feature update notifications</div>
+                  </div>
+                  <label class="toggle-wrap">
+                    <input type="checkbox" class="toggle-input" id="s-notifTips" checked onchange="applySetting('notifTips',this.checked)">
+                    <span class="toggle-slider"></span>
+                  </label>
+                </div>
+                <div class="settings-row">
+                  <div class="settings-row-info">
+                    <div class="settings-row-label">API Key Rotation Alerts</div>
+                    <div class="settings-row-desc">Show a toast when an API key rotates due to rate limiting</div>
+                  </div>
+                  <label class="toggle-wrap">
+                    <input type="checkbox" class="toggle-input" id="s-notifApiKey" onchange="applySetting('notifApiKey',this.checked)">
+                    <span class="toggle-slider"></span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <!-- PRIVACY & DATA -->
+            <div class="settings-section" id="sec-privacy">
+              <div class="settings-section-heading">🔒 Privacy &amp; Data</div>
+              <div class="settings-group">
+                <div class="settings-group-title">Your Data</div>
+                <div class="settings-row">
+                  <div class="settings-row-info">
+                    <div class="settings-row-label">Export All My Chats</div>
+                    <div class="settings-row-desc">Download all your conversations as a PDF file</div>
+                  </div>
+                  <button class="settings-btn secondary" onclick="exportData()">⬇ Export PDF</button>
+                </div>
+                <div class="settings-row">
+                  <div class="settings-row-info">
+                    <div class="settings-row-label">Clear All Chat History</div>
+                    <div class="settings-row-desc">Permanently delete all your sessions and messages</div>
+                  </div>
+                  <button class="settings-btn danger" onclick="clearAllHistory()">🗑 Clear All</button>
+                </div>
+                <div class="settings-row">
+                  <div class="settings-row-info">
+                    <div class="settings-row-label">Delete Account</div>
+                    <div class="settings-row-desc">Permanently remove your account and all associated data</div>
+                  </div>
+                  <button class="settings-btn danger" onclick="deleteAccount()">⚠ Delete Account</button>
+                </div>
+              </div>
+              <div class="settings-group">
+                <div class="settings-group-title">Session</div>
+                <div class="settings-row">
+                  <div class="settings-row-info">
+                    <div class="settings-row-label">Sign Out</div>
+                    <div class="settings-row-desc">Sign out of your account on this device</div>
+                  </div>
+                  <button class="settings-btn danger" onclick="doLogout()">← Sign Out</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- ACCESSIBILITY -->
+            <div class="settings-section" id="sec-accessibility">
+              <div class="settings-section-heading">♿ Accessibility</div>
+              <div class="settings-group">
+                <div class="settings-group-title">Motion &amp; Animation</div>
+                <div class="settings-row">
+                  <div class="settings-row-info">
+                    <div class="settings-row-label">Reduce Motion</div>
+                    <div class="settings-row-desc">Disable animations, transitions, and skeleton loaders</div>
+                  </div>
+                  <label class="toggle-wrap">
+                    <input type="checkbox" class="toggle-input" id="s-reduceMotion" onchange="applySetting('reduceMotion',this.checked)">
+                    <span class="toggle-slider"></span>
+                  </label>
+                </div>
+              </div>
+              <div class="settings-group">
+                <div class="settings-group-title">Display</div>
+                <div class="settings-row">
+                  <div class="settings-row-info">
+                    <div class="settings-row-label">High Contrast Mode</div>
+                    <div class="settings-row-desc">Increase contrast between text and backgrounds</div>
+                  </div>
+                  <label class="toggle-wrap">
+                    <input type="checkbox" class="toggle-input" id="s-highContrast" onchange="applySetting('highContrast',this.checked)">
+                    <span class="toggle-slider"></span>
+                  </label>
+                </div>
+                <div class="settings-row">
+                  <div class="settings-row-info">
+                    <div class="settings-row-label">Large Click Targets</div>
+                    <div class="settings-row-desc">Make buttons and interactive elements larger for easier tapping</div>
+                  </div>
+                  <label class="toggle-wrap">
+                    <input type="checkbox" class="toggle-input" id="s-largeTargets" onchange="applySetting('largeTargets',this.checked)">
+                    <span class="toggle-slider"></span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <!-- MEDICAL PREFERENCES -->
+            <div class="settings-section" id="sec-medical">
+              <div class="settings-section-heading">🩺 Medical Preferences</div>
+              <div class="settings-group">
+                <div class="settings-group-title">Response Safety</div>
+                <div class="settings-row">
+                  <div class="settings-row-info">
+                    <div class="settings-row-label">Always Show Doctor Reminder</div>
+                    <div class="settings-row-desc">Show "Please consult a qualified doctor" at the end of every answer</div>
+                  </div>
+                  <label class="toggle-wrap">
+                    <input type="checkbox" class="toggle-input" id="s-doctorReminder" checked onchange="applySetting('doctorReminder',this.checked)">
+                    <span class="toggle-slider"></span>
+                  </label>
+                </div>
+                <div class="settings-row">
+                  <div class="settings-row-info">
+                    <div class="settings-row-label">Low Confidence Warning Threshold</div>
+                    <div class="settings-row-desc">Show a warning banner when AI confidence drops below this level</div>
+                  </div>
+                  <div class="slider-row">
+                    <input type="range" class="settings-slider" id="s-confThreshold"
+                      min="20" max="80" step="10" value="60"
+                      oninput="document.getElementById('confThreshVal').textContent=this.value+'%'; applySetting('confThreshold',this.value)">
+                    <span class="slider-val" id="confThreshVal">60%</span>
+                  </div>
+                </div>
+              </div>
+              <div class="settings-group">
+                <div class="settings-group-title">Emergency Contacts</div>
+                <div class="emergency-contact">
+                  <div class="emergency-icon" style="background:rgba(239,68,68,0.15);">🚑</div>
+                  <div class="emergency-body">
+                    <div class="emergency-name">Emergency Services</div>
+                    <div class="emergency-num">112</div>
+                    <div class="emergency-desc">All emergencies — police, fire, ambulance</div>
+                  </div>
+                </div>
+                <div class="emergency-contact">
+                  <div class="emergency-icon" style="background:rgba(239,68,68,0.15);">🏥</div>
+                  <div class="emergency-body">
+                    <div class="emergency-name">AIIMS Helpline</div>
+                    <div class="emergency-num">1800-11-7711</div>
+                    <div class="emergency-desc">All India Institute of Medical Sciences</div>
+                  </div>
+                </div>
+                <div class="emergency-contact">
+                  <div class="emergency-icon" style="background:rgba(251,191,36,0.12);">🧠</div>
+                  <div class="emergency-body">
+                    <div class="emergency-name">iCall Mental Health</div>
+                    <div class="emergency-num">9152987821</div>
+                    <div class="emergency-desc">Free counselling and mental health support</div>
+                  </div>
+                </div>
+                <div class="emergency-contact">
+                  <div class="emergency-icon" style="background:rgba(45,212,191,0.12);">☠️</div>
+                  <div class="emergency-body">
+                    <div class="emergency-name">Poison Control</div>
+                    <div class="emergency-num">1800-11-6117</div>
+                    <div class="emergency-desc">National Poison Information Centre (AIIMS)</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ABOUT -->
+            <div class="settings-section" id="sec-about">
+              <div class="settings-section-heading">ℹ️ About MedAI</div>
+              <div class="about-card">
+                <div class="about-logo">🩺</div>
+                <div class="about-name">MedAI Core</div>
+                <div class="about-ver">Version 2.0.0 &nbsp;·&nbsp; Academic Year 2025-26</div>
+                <div class="about-pills">
+                  <span class="about-pill">⚡ Gemini 2.5 Flash</span>
+                  <span class="about-pill">📚 MedQuAD Dataset</span>
+                  <span class="about-pill">🔍 FAISS Retrieval</span>
+                  <span class="about-pill">🤖 RAG Pipeline</span>
+                  <span class="about-pill">🔑 Multi-Key Rotation</span>
+                </div>
+              </div>
+              <div class="settings-group">
+                <div class="settings-group-title">Technical Stack</div>
+                <div class="settings-row">
+                  <div class="settings-row-info"><div class="settings-row-label">AI Model</div></div>
+                  <span style="font-size:12px;color:var(--muted2);">Google Gemini 2.5 Flash</span>
+                </div>
+                <div class="settings-row">
+                  <div class="settings-row-info"><div class="settings-row-label">Knowledge Base</div></div>
+                  <span style="font-size:12px;color:var(--muted2);">MedQuAD (9 categories)</span>
+                </div>
+                <div class="settings-row">
+                  <div class="settings-row-info"><div class="settings-row-label">Embeddings</div></div>
+                  <span style="font-size:12px;color:var(--muted2);">Sentence Transformers (384-dim)</span>
+                </div>
+                <div class="settings-row">
+                  <div class="settings-row-info"><div class="settings-row-label">Vector Search</div></div>
+                  <span style="font-size:12px;color:var(--muted2);">FAISS-CPU 1.8.0</span>
+                </div>
+                <div class="settings-row">
+                  <div class="settings-row-info"><div class="settings-row-label">Backend</div></div>
+                  <span style="font-size:12px;color:var(--muted2);">FastAPI + SQLAlchemy + SQLite</span>
+                </div>
+                <div class="settings-row">
+                  <div class="settings-row-info"><div class="settings-row-label">Frontend</div></div>
+                  <span style="font-size:12px;color:var(--muted2);">Vanilla HTML / CSS / JavaScript SPA</span>
+                </div>
+                <div class="settings-row">
+                  <div class="settings-row-info"><div class="settings-row-label">Developed by</div></div>
+                  <span style="font-size:12px;color:var(--muted2);">Kashish Patel · BrainyBeam Technologies</span>
+                </div>
+              </div>
+              <div class="settings-group">
+                <div class="settings-group-title">Disclaimer</div>
+                <div class="settings-row">
+                  <div class="settings-row-info">
+                    <div class="settings-row-desc" style="font-size:12px;line-height:1.7;">
+                      MedAI is an informational assistant only. It is <b>not a substitute for professional medical advice, diagnosis, or treatment</b>.
+                      Always consult a qualified healthcare professional for any medical concerns.
+                      In case of emergency, call <b style="color:var(--danger);">112</b> immediately.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div><!-- settings-body -->
+        </div><!-- settings-layout -->
+      </div><!-- page-settings -->
+
+      <!-- Support Page -->
+      <div class="page" id="page-support" style="overflow-y:auto;">
+        <div class="page-content">
+          <div class="support-grid">
+            <div class="support-card" onclick="showPage('chat');newChat();">
+              <div class="support-card-icon">💬</div>
+              <div class="support-card-title">New Chat</div>
+              <div class="support-card-desc">Start a fresh medical Q&amp;A session with MedAI</div>
+            </div>
+            <div class="support-card" onclick="showPage('report');">
+              <div class="support-card-icon">📊</div>
+              <div class="support-card-title">Report Analyzer</div>
+              <div class="support-card-desc">Upload PDF or image medical reports for AI analysis</div>
+            </div>
+            <div class="support-card" onclick="exportData();">
+              <div class="support-card-icon">⬇️</div>
+              <div class="support-card-title">Export Chats</div>
+              <div class="support-card-desc">Download your current conversation as a PDF</div>
+            </div>
+            <div class="support-card" onclick="showPage('settings');switchSettingsTab('medical');">
+              <div class="support-card-icon">🚑</div>
+              <div class="support-card-title">Emergency Contacts</div>
+              <div class="support-card-desc">View emergency numbers including 112, AIIMS helpline and poison control</div>
+            </div>
+          </div>
+          <div class="settings-group">
+            <div class="settings-group-title">Keyboard Shortcuts</div>
+            ${[['Send message','Enter'],['New line','Shift + Enter'],['New chat','Ctrl + N'],['Close panels','Escape']].map(([label,keys])=>`
+            <div class="settings-row">
+              <div class="settings-row-info"><div class="settings-row-label">${label}</div></div>
+              <span style="font-size:12px;color:var(--blue-bright);font-weight:600;font-family:monospace;">${keys}</span>
+            </div>`).join('')}
+          </div>
+          <div class="settings-group">
+            <div class="settings-group-title">About This App</div>
+            <div class="settings-row">
+              <div class="settings-row-info">
+                <div class="settings-row-desc" style="font-size:12px;line-height:1.8;">
+                  <b>MedAI Core</b> is powered by the MedQuAD medical knowledge base and Google Gemini 2.5 Flash.
+                  It uses a 5-step Retrieval-Augmented Generation (RAG) pipeline for accurate, grounded answers.<br><br>
+                  For life-threatening emergencies, always call <b style="color:var(--danger);">112</b> immediately.
+                  This app is for informational purposes only and is not a substitute for professional medical advice.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div><!-- page-support -->
+
     </div><!-- main-content -->
   </div><!-- app -->
   `;
@@ -676,6 +1622,9 @@ function initApp() {
   loadSidebarHistory();
   loadPastReports();
   if (currentUser.is_admin) loadAdminData();
+  // Apply any saved settings immediately
+  const saved = JSON.parse(localStorage.getItem('medai_settings') || '{}');
+  applyAllSettings({ ...SETTINGS_DEFAULTS, ...saved });
 }
 
 /* ── Chat history sidebar ─────────────────────────────────────────────────── */
@@ -767,9 +1716,11 @@ async function deleteSession(event, sid) {
 
 
 const PAGE_META = {
-  chat:   { title:'Clinical Chat', sub:'AI-powered medical question answering' },
-  report: { title:'Report Analyzer', sub:'Upload and interpret medical documents with AI' },
-  admin:  { title:'System Overview', sub:'Real-time performance and clinical engagement metrics.' },
+  chat:     { title:'Clinical Chat',    sub:'AI-powered medical question answering' },
+  report:   { title:'Report Analyzer', sub:'Upload and interpret medical documents with AI' },
+  admin:    { title:'System Overview',  sub:'Real-time performance and clinical engagement metrics.' },
+  settings: { title:'Settings',         sub:'Customize your MedAI experience' },
+  support:  { title:'Support',          sub:'Help, resources, and emergency contacts' },
 };
 
 function showPage(page) {
@@ -783,8 +1734,10 @@ function showPage(page) {
   const meta = PAGE_META[page] || {};
   document.getElementById('pageTitle').textContent = meta.title || '';
   document.getElementById('pageSub').textContent   = meta.sub   || '';
-  if (page === 'report') { document.getElementById(`page-${page}`).style.display = 'block'; loadPastReports(); }
+  if (page === 'report')   { document.getElementById(`page-${page}`).style.display = 'block'; loadPastReports(); }
   if (page === 'admin' && currentUser.is_admin) { document.getElementById(`page-${page}`).style.display = 'block'; loadAdminData(); }
+  if (page === 'settings') { document.getElementById(`page-${page}`).style.display = 'flex'; loadSettingsFromStorage(); }
+  if (page === 'support')  { document.getElementById(`page-${page}`).style.display = 'block'; }
 }
 
 /* ── Chat ─────────────────────────────────────────────────────────────────── */
@@ -1251,7 +2204,123 @@ function markdownToHtml(text) {
     .replace(/\n/g,'<br>');
 }
 
-/* ── Feedback ──────────────────────────────────────────────────────────────── */
+/* ── Dropdown panels ──────────────────────────────────────────────────────── */
+function toggleDropdown(id) {
+  const panel   = document.getElementById(id);
+  const overlay = document.getElementById('dropdownOverlay');
+  const isOpen  = !panel.classList.contains('hidden');
+
+  // Close all first
+  closeDropdowns();
+
+  if (!isOpen) {
+    panel.classList.remove('hidden');
+    overlay.style.display = 'block';
+
+    // Populate profile stats when opening
+    if (id === 'profilePanel') populateProfilePanel();
+  }
+}
+
+function closeDropdowns() {
+  ['notifPanel','helpPanel','profilePanel'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.add('hidden');
+  });
+  const ov = document.getElementById('dropdownOverlay');
+  if (ov) ov.style.display = 'none';
+}
+
+/* ── Notifications ────────────────────────────────────────────────────────── */
+function markRead(el, type) {
+  el.classList.remove('unread');
+  const dot = el.querySelector('.notif-dot');
+  if (dot) dot.remove();
+  updateNotifBadge();
+}
+
+function markAllRead() {
+  document.querySelectorAll('.notif-item.unread').forEach(el => {
+    el.classList.remove('unread');
+    const dot = el.querySelector('.notif-dot');
+    if (dot) dot.remove();
+  });
+  updateNotifBadge();
+}
+
+function updateNotifBadge() {
+  const count = document.querySelectorAll('.notif-item.unread').length;
+  const badge = document.getElementById('notifBadge');
+  if (!badge) return;
+  if (count === 0) {
+    badge.style.display = 'none';
+  } else {
+    badge.style.display = 'flex';
+    badge.textContent = count;
+  }
+}
+
+/* ── Profile stats ────────────────────────────────────────────────────────── */
+async function populateProfilePanel() {
+  // Fill name and role
+  const name  = currentUser.username || 'User';
+  const role  = currentUser.is_admin ? '🛡️ Administrator' : '✅ Active User';
+  const email = currentUser.email || (currentUser.is_admin ? 'Administrator' : 'Clinical User');
+
+  const dpName   = document.getElementById('dpName');
+  const dpEmail  = document.getElementById('dpEmail');
+  const dpRole   = document.getElementById('dpRole');
+  const dpAvatar = document.getElementById('dpAvatarLetter');
+
+  if (dpName)   dpName.textContent   = name;
+  if (dpEmail)  dpEmail.textContent  = email;
+  if (dpRole)   dpRole.textContent   = role;
+  if (dpAvatar) dpAvatar.textContent = name[0].toUpperCase();
+
+  // Load session count from sidebar history
+  try {
+    const r = await fetch(`${API}/chat/sessions`, {
+      headers: { 'Authorization': `Bearer ${authToken}` },
+    });
+    if (r.ok) {
+      const data = await r.json();
+      const sessions  = data.sessions || [];
+      const msgCount  = sessions.reduce((s, x) => s + (x.message_count || 0), 0);
+      const el = document.getElementById('dpSessions');
+      const em = document.getElementById('dpMessages');
+      if (el) el.textContent = sessions.length;
+      if (em) em.textContent = msgCount;
+    }
+  } catch (e) { /* silent */ }
+
+  // Load report count
+  try {
+    const r2 = await fetch(`${API}/report/history`, {
+      headers: { 'Authorization': `Bearer ${authToken}` },
+    });
+    if (r2.ok) {
+      const d2 = await r2.json();
+      const er = document.getElementById('dpReports');
+      if (er) er.textContent = (d2.reports || []).length;
+    }
+  } catch (e) {
+    const er = document.getElementById('dpReports');
+    if (er) er.textContent = '—';
+  }
+}
+
+/* ── Keyboard shortcuts ───────────────────────────────────────────────────── */
+document.addEventListener('keydown', e => {
+  // Ctrl+N = new chat
+  if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+    e.preventDefault();
+    newChat();
+  }
+  // Escape = close dropdowns
+  if (e.key === 'Escape') closeDropdowns();
+});
+
+
 async function sendFeedback(messageId, rating, upId, dnId) {
   // Optimistic UI — highlight immediately
   const upBtn = document.getElementById(upId);
@@ -1310,6 +2379,155 @@ function cleanAnswer(text) {
   // Remove any accidental "Source N:" references Gemini might still output
   return (text || '').replace(/Source\s+\d+:\s*/gi, '');
 }
+
+/* ── Sidebar toggle ───────────────────────────────────────────────────────── */
+function toggleSidebar() {
+  const app = document.getElementById('app');
+  const btn = document.getElementById('sidebarToggleBtn');
+  const collapsed = app.classList.toggle('sidebar-collapsed');
+  // Persist preference
+  localStorage.setItem('medai_sidebar_collapsed', collapsed ? '1' : '0');
+  // Update button icon
+  if (btn) btn.textContent = collapsed ? '☰' : '☰';
+}
+
+// Restore sidebar state on load
+(function restoreSidebar() {
+  if (localStorage.getItem('medai_sidebar_collapsed') === '1') {
+    const app = document.getElementById('app');
+    if (app) app.classList.add('sidebar-collapsed');
+  }
+})();
+
+/* ── Settings ─────────────────────────────────────────────────────────────── */
+const SETTINGS_DEFAULTS = {
+  theme: 'dark', fontsize: 'medium', bubble: 'rounded', sidebar: 'normal',
+  enterSend: true, autoScroll: true, skeleton: true, confidence: true, category: true,
+  language: 'english', notifSession: true, notifFeedback: true, notifTips: true, notifApiKey: false,
+  reduceMotion: false, highContrast: false, largeTargets: false,
+  doctorReminder: true, confThreshold: 60,
+  accent: '#3b82f6',
+};
+
+function loadSettingsFromStorage() {
+  const saved = JSON.parse(localStorage.getItem('medai_settings') || '{}');
+  const s = { ...SETTINGS_DEFAULTS, ...saved };
+
+  // Apply all to UI controls
+  const set = (id, val) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (el.type === 'checkbox') el.checked = val;
+    else if (el.type === 'range') { el.value = val; document.getElementById('confThreshVal').textContent = val + '%'; }
+    else el.value = val;
+  };
+  set('s-theme', s.theme); set('s-fontsize', s.fontsize); set('s-bubble', s.bubble);
+  set('s-sidebar', s.sidebar); set('s-enterSend', s.enterSend); set('s-autoScroll', s.autoScroll);
+  set('s-skeleton', s.skeleton); set('s-confidence', s.confidence); set('s-category', s.category);
+  set('s-language', s.language); set('s-notifSession', s.notifSession);
+  set('s-notifFeedback', s.notifFeedback); set('s-notifTips', s.notifTips);
+  set('s-notifApiKey', s.notifApiKey); set('s-reduceMotion', s.reduceMotion);
+  set('s-highContrast', s.highContrast); set('s-largeTargets', s.largeTargets);
+  set('s-doctorReminder', s.doctorReminder); set('s-confThreshold', s.confThreshold);
+
+  // Apply visual effects
+  applyAllSettings(s);
+}
+
+function applySetting(key, value) {
+  const saved = JSON.parse(localStorage.getItem('medai_settings') || '{}');
+  saved[key] = value;
+  localStorage.setItem('medai_settings', JSON.stringify(saved));
+  applyAllSettings({ ...SETTINGS_DEFAULTS, ...saved });
+}
+
+function applyAllSettings(s) {
+  const root = document.documentElement;
+
+  // Font size
+  const sizes = { small: '12px', medium: '14px', large: '16px', xlarge: '18px' };
+  root.style.setProperty('--chat-font-size', sizes[s.fontsize] || '14px');
+
+  // Sidebar width
+  const widths = { compact: '220px', normal: '260px', wide: '300px' };
+  root.style.setProperty('--sidebar-width', widths[s.sidebar] || '260px');
+
+  // Accent color
+  if (s.accent) root.style.setProperty('--blue', s.accent);
+
+  // High contrast
+  document.body.classList.toggle('high-contrast', !!s.highContrast);
+
+  // Reduce motion
+  document.body.classList.toggle('reduce-motion', !!s.reduceMotion);
+
+  // Large targets
+  document.body.classList.toggle('large-targets', !!s.largeTargets);
+
+  // Bubble style
+  document.body.dataset.bubble = s.bubble || 'rounded';
+
+  // Confidence/category badges visibility — applied when messages render
+  window.MEDAI_SETTINGS = s;
+}
+
+function setAccent(color) {
+  applySetting('accent', color);
+  // Update swatch borders
+  document.querySelectorAll('[id^="accent-"]').forEach(el => {
+    el.style.border = '2px solid transparent';
+  });
+  const id = 'accent-' + color.slice(1);
+  const el = document.getElementById(id);
+  if (el) el.style.border = '2px solid white';
+}
+
+function switchSettingsTab(tab) {
+  document.querySelectorAll('.settings-nav-item').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.settings-section').forEach(el => el.classList.remove('active'));
+  const navEl = document.getElementById(`stab-${tab}`);
+  const secEl = document.getElementById(`sec-${tab}`);
+  if (navEl) navEl.classList.add('active');
+  if (secEl) secEl.classList.add('active');
+}
+
+async function clearAllHistory() {
+  if (!confirm('Delete ALL your chat history? This cannot be undone.')) return;
+  try {
+    const sessions = await fetch(`${API}/chat/sessions`, {
+      headers: { 'Authorization': `Bearer ${authToken}` }
+    }).then(r => r.json());
+    for (const s of (sessions.sessions || [])) {
+      await fetch(`${API}/chat/history/${s.session_id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${authToken}` }
+      });
+    }
+    newChat();
+    loadSidebarHistory();
+    alert('All chat history cleared.');
+  } catch (e) {
+    alert('Error clearing history: ' + e.message);
+  }
+}
+
+async function deleteAccount() {
+  const confirmed = prompt('Type DELETE to permanently remove your account and all data:');
+  if (confirmed !== 'DELETE') return;
+  try {
+    const r = await fetch(`${API}/auth/account`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${authToken}` }
+    });
+    if (r.ok) { alert('Account deleted.'); doLogout(); }
+    else { const d = await r.json(); alert('Error: ' + (d.detail || 'Could not delete account.')); }
+  } catch (e) {
+    alert('Error: ' + e.message);
+  }
+}
+
+// Apply settings on every page load
+window.MEDAI_SETTINGS = SETTINGS_DEFAULTS;
 
 function doLogout() {
   localStorage.removeItem('medai_token');
