@@ -12,6 +12,8 @@ function getAppHTML() {
       background: #0d1220;
       border-right: 1px solid var(--border);
       display: flex; flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
       padding: 0;
     }
 
@@ -22,26 +24,69 @@ function getAppHTML() {
     .sidebar-brand .b-title { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; }
     .sidebar-brand .b-sub   { font-size: 11px; color: var(--muted); margin-top: 2px; }
 
-    .sidebar-search {
-      padding: 14px 16px;
-      border-bottom: 1px solid var(--border);
+    .sidebar-new-chat {
+      padding: 12px 12px 8px;
     }
-    .search-input-wrap { position: relative; }
-    .search-input-wrap input {
+    .new-chat-sidebar-btn {
       width: 100%;
-      background: var(--bg-input);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 8px 12px 8px 34px;
-      font-size: 12px;
-      font-family: 'Sora', sans-serif;
-      color: var(--text);
-      outline: none;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      background: var(--blue); color: white; border: none;
+      border-radius: 10px; padding: 10px 14px;
+      font-size: 13px; font-weight: 600; font-family: 'Sora', sans-serif;
+      cursor: pointer; transition: background 0.2s;
     }
-    .search-input-wrap input::placeholder { color: var(--muted); }
-    .search-icon { position:absolute; left:10px; top:50%; transform:translateY(-50%); font-size:13px; color:var(--muted); pointer-events:none; }
+    .new-chat-sidebar-btn:hover { background: #2563eb; }
 
-    .sidebar-nav { flex:1; padding: 12px 8px; overflow-y: auto; }
+    .sidebar-section-label {
+      font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--muted); padding: 10px 16px 6px;
+    }
+
+    .sidebar-history {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0 8px 8px;
+      min-height: 0;
+    }
+    .sidebar-history::-webkit-scrollbar { width: 4px; }
+    .sidebar-history::-webkit-scrollbar-track { background: transparent; }
+    .sidebar-history::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 4px; }
+
+    .history-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 9px 10px;
+      border-radius: 9px;
+      cursor: pointer;
+      transition: background 0.15s;
+      margin-bottom: 2px;
+      group: true;
+    }
+    .history-item:hover { background: rgba(255,255,255,0.05); }
+    .history-item.active { background: rgba(59,130,246,0.12); }
+    .history-item-icon { font-size: 13px; flex-shrink: 0; opacity: 0.6; }
+    .history-item-body { flex: 1; min-width: 0; }
+    .history-item-title {
+      font-size: 12px; font-weight: 500; color: var(--muted2);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      line-height: 1.4;
+    }
+    .history-item.active .history-item-title { color: var(--blue-bright); }
+    .history-item-meta { font-size: 10px; color: var(--muted); margin-top: 1px; }
+    .history-item-del {
+      flex-shrink: 0; opacity: 0;
+      background: none; border: none; cursor: pointer;
+      color: var(--muted); font-size: 13px; padding: 2px 4px;
+      border-radius: 4px; transition: all 0.15s;
+    }
+    .history-item:hover .history-item-del { opacity: 1; }
+    .history-item-del:hover { background: rgba(239,68,68,0.15); color: var(--danger); }
+
+    .history-empty {
+      padding: 20px 12px; text-align: center;
+      font-size: 12px; color: var(--muted); line-height: 1.6;
+    }
+
+    .sidebar-nav { padding: 4px 8px 0; border-top: 1px solid var(--border); }
     .nav-item {
       display: flex; align-items: center; gap: 12px;
       padding: 11px 14px;
@@ -399,13 +444,17 @@ function getAppHTML() {
         <div class="b-title">MedAI Core</div>
         <div class="b-sub">Clinical Decision Support</div>
       </div>
-      <div class="sidebar-search">
-        <div class="search-input-wrap">
-          <span class="search-icon">🔍</span>
-          <input type="text" placeholder="Search analytics, logs, or users…">
-        </div>
+
+      <div class="sidebar-new-chat">
+        <button class="new-chat-sidebar-btn" onclick="newChat()">✏️ New Chat</button>
       </div>
-      <nav class="sidebar-nav">
+
+      <div class="sidebar-section-label">Recent Chats</div>
+      <div class="sidebar-history" id="sidebarHistory">
+        <div class="history-empty">No chats yet.<br>Start a conversation above.</div>
+      </div>
+
+      <div class="sidebar-nav">
         <div class="nav-item active" onclick="showPage('chat')" id="nav-chat">
           <span class="nav-icon">💬</span> Chat
         </div>
@@ -415,13 +464,14 @@ function getAppHTML() {
         ${currentUser.is_admin ? `<div class="nav-item" onclick="showPage('admin')" id="nav-admin">
           <span class="nav-icon">🎛</span> Admin Dashboard
         </div>` : ''}
-        <div class="nav-item" style="margin-top:8px;">
+        <div class="nav-item" style="margin-top:4px;">
           <span class="nav-icon">⚙</span> Settings
         </div>
-        <div class="nav-item" onclick="">
+        <div class="nav-item">
           <span class="nav-icon">❓</span> Support
         </div>
-      </nav>
+      </div>
+
       <div class="sidebar-bottom">
         <div class="user-card">
           <div class="user-avatar">${(currentUser.username||'U')[0].toUpperCase()}</div>
@@ -454,10 +504,6 @@ function getAppHTML() {
       <!-- Pages -->
       <!-- Chat -->
       <div class="page active" id="page-chat" style="display:flex; flex-direction:column; height:calc(100vh - 60px);">
-        <div class="session-header">
-          <span class="session-id" id="sessionIdLabel">Session: loading…</span>
-          <button class="new-chat-btn" onclick="newChat()">+ New Chat</button>
-        </div>
         <div class="chat-messages" id="chatMessages">
           <div class="chat-empty" id="chatEmpty">
             <div class="empty-icon">🩺</div>
@@ -627,13 +673,99 @@ let currentPage   = 'chat';
 function generateId() { return Math.random().toString(36).substr(2,8); }
 
 function initApp() {
-  updateSessionLabel();
-  loadPastSessions();
+  loadSidebarHistory();
   loadPastReports();
   if (currentUser.is_admin) loadAdminData();
 }
 
-/* ── Navigation ───────────────────────────────────────────────────────────── */
+/* ── Chat history sidebar ─────────────────────────────────────────────────── */
+async function loadSidebarHistory() {
+  const el = document.getElementById('sidebarHistory');
+  if (!el) return;
+  try {
+    const r = await fetch(`${API}/chat/sessions`, {
+      headers: { 'Authorization': `Bearer ${authToken}` },
+    });
+    if (!r.ok) return;
+    const data = await r.json();
+    const sessions = data.sessions || [];
+
+    if (!sessions.length) {
+      el.innerHTML = '<div class="history-empty">No chats yet.<br>Start a conversation above.</div>';
+      return;
+    }
+
+    el.innerHTML = sessions.map(s => `
+      <div class="history-item ${s.session_id === sessionId ? 'active' : ''}"
+           id="hist_${s.session_id}"
+           onclick="loadSession('${s.session_id}')">
+        <span class="history-item-icon">💬</span>
+        <div class="history-item-body">
+          <div class="history-item-title">${escHtml(s.title)}</div>
+          <div class="history-item-meta">${s.last_active} · ${s.message_count} msgs</div>
+        </div>
+        <button class="history-item-del" title="Delete chat"
+          onclick="deleteSession(event, '${s.session_id}')">🗑</button>
+      </div>
+    `).join('');
+  } catch (e) {
+    console.error('History load error:', e);
+  }
+}
+
+async function loadSession(sid) {
+  if (sid === sessionId) return; // already active
+  sessionId = sid;
+  messages  = [];
+
+  // Update active state in sidebar
+  document.querySelectorAll('.history-item').forEach(el => {
+    el.classList.toggle('active', el.id === `hist_${sid}`);
+  });
+
+  // Switch to chat page
+  showPage('chat');
+
+  // Load messages from server
+  try {
+    const r = await fetch(`${API}/chat/history/${sid}`, {
+      headers: { 'Authorization': `Bearer ${authToken}` },
+    });
+    if (!r.ok) return;
+    const data = await r.json();
+
+    // Rebuild messages array from history
+    messages = data.messages.map(m => ({
+      role:          m.role,
+      content:       m.content,
+      category:      m.category,
+      confidence:    m.confidence,
+      low_confidence: m.confidence !== null && m.confidence < 0.60,
+      message_id:    m.id,
+    }));
+    renderMessages();
+  } catch (e) {
+    console.error('Load session error:', e);
+  }
+}
+
+async function deleteSession(event, sid) {
+  event.stopPropagation(); // don't trigger loadSession
+  if (!confirm('Delete this chat?')) return;
+  try {
+    await fetch(`${API}/chat/history/${sid}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${authToken}` },
+    });
+    // If we deleted the current session, start a new one
+    if (sid === sessionId) newChat();
+    loadSidebarHistory();
+  } catch (e) {
+    console.error('Delete session error:', e);
+  }
+}
+
+
 const PAGE_META = {
   chat:   { title:'Clinical Chat', sub:'AI-powered medical question answering' },
   report: { title:'Report Analyzer', sub:'Upload and interpret medical documents with AI' },
@@ -656,15 +788,12 @@ function showPage(page) {
 }
 
 /* ── Chat ─────────────────────────────────────────────────────────────────── */
-function updateSessionLabel() {
-  const el = document.getElementById('sessionIdLabel');
-  if (el) el.textContent = `Session: ${sessionId}`;
-}
-
 function newChat() {
   sessionId = generateId();
   messages  = [];
-  updateSessionLabel();
+  // Clear active state in sidebar
+  document.querySelectorAll('.history-item').forEach(el => el.classList.remove('active'));
+  showPage('chat');
   renderMessages();
 }
 
@@ -733,6 +862,16 @@ async function sendMessage() {
   }
 
   messages.push(botMsg);
+
+  // After first exchange, refresh sidebar so the title appears
+  if (messages.filter(m => m.role === 'user').length === 1) {
+    loadSidebarHistory();
+  } else {
+    // Just update active state without full reload
+    document.querySelectorAll('.history-item').forEach(el => {
+      el.classList.toggle('active', el.id === `hist_${sessionId}`);
+    });
+  }
 
   // Replace skeleton directly with answer — no full redraw, no blank flash
   const skelEl = document.getElementById(loadId);
@@ -805,10 +944,6 @@ function renderMessages() {
 
   el.scrollTop = el.scrollHeight;
 }
-async function loadPastSessions() {
-  // Sessions displayed in sidebar search area - kept minimal for the design
-}
-
 /* ── Report Analyzer ──────────────────────────────────────────────────────── */
 function handleDragOver(e) { e.preventDefault(); document.getElementById('uploadZone').classList.add('dragover'); }
 function handleDrop(e) {

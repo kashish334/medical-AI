@@ -17,7 +17,7 @@ from ..db import crud
 from ..db.db_models import User
 from ..models.schemas import (
     AskRequest, AskResponse,
-    HistoryResponse, SessionListResponse, MessageOut,
+    HistoryResponse, SessionListResponse, SessionItem, MessageOut,
     FeedbackRequest, FeedbackResponse,
 )
 from ..dependencies import get_current_user

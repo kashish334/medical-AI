@@ -91,8 +91,14 @@ class HistoryResponse(BaseModel):
     messages:   list[MessageOut]
 
 
+class SessionItem(BaseModel):
+    session_id:    str
+    title:         str
+    last_active:   str
+    message_count: int
+
 class SessionListResponse(BaseModel):
-    sessions: list[str]
+    sessions: list[SessionItem]
 
 
 # ── Feedback ───────────────────────────────────────────────────────────────────

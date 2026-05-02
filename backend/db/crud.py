@@ -76,15 +76,49 @@ def get_session_history(db: Session, user_id: int, session_id: str) -> list[Chat
     )
 
 
-def get_all_sessions(db: Session, user_id: int) -> list[str]:
+def get_all_sessions(db: Session, user_id: int) -> list[dict]:
+    """
+    Returns all sessions for a user, each with:
+      - session_id
+      - title: first user message (truncated to 60 chars)
+      - last_active: most recent message timestamp
+      - message_count: total messages in session
+    Ordered by most recent activity first.
+    """
     rows = (
-        db.query(ChatMessage.session_id, func.max(ChatMessage.created_at).label("last"))
+        db.query(
+            ChatMessage.session_id,
+            func.max(ChatMessage.created_at).label("last"),
+            func.count(ChatMessage.id).label("msg_count"),
+        )
         .filter(ChatMessage.user_id == user_id)
         .group_by(ChatMessage.session_id)
         .order_by(desc("last"))
         .all()
     )
-    return [r.session_id for r in rows]
+
+    result = []
+    for r in rows:
+        # Get first user message for the title
+        first_msg = (
+            db.query(ChatMessage.content)
+            .filter(
+                ChatMessage.user_id == user_id,
+                ChatMessage.session_id == r.session_id,
+                ChatMessage.role == "user",
+            )
+            .order_by(ChatMessage.created_at)
+            .first()
+        )
+        raw_title = first_msg.content if first_msg else "Untitled Chat"
+        title = raw_title[:60] + ("…" if len(raw_title) > 60 else "")
+        result.append({
+            "session_id":    r.session_id,
+            "title":         title,
+            "last_active":   str(r.last)[:16],
+            "message_count": r.msg_count,
+        })
+    return result
 
 
 def delete_session(db: Session, user_id: int, session_id: str) -> int:
