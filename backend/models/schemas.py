@@ -51,6 +51,7 @@ class TokenResponse(BaseModel):
 class AskRequest(BaseModel):
     question:   str
     session_id: str
+    language:   str = 'english'  # e.g. english, hindi, gujarati
 
     @field_validator("question")
     @classmethod

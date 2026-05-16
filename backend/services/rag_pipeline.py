@@ -55,6 +55,7 @@ class PipelineResponse:
 def run(
     question: str,
     conversation_history: list[dict] | None = None,
+    language: str = 'english',
 ) -> PipelineResponse:
     """
     Full RAG pipeline entry point.
@@ -110,7 +111,7 @@ def run(
 
     # ── Step 5: Generate grounded answer ──────────────────────────────────────
     contexts = [r.answer for r in results]
-    answer   = generate_answer(question, contexts, conversation_history)
+    answer   = generate_answer(question, contexts, conversation_history, language=language)
 
     return PipelineResponse(
         answer=answer,

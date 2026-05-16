@@ -40,7 +40,7 @@ def ask(
     ]
 
     # Run RAG pipeline
-    result = rag_pipeline.run(payload.question, conversation_history)
+    result = rag_pipeline.run(payload.question, conversation_history, language=getattr(payload, 'language', 'english'))
 
     # Persist user message
     crud.save_message(
@@ -113,7 +113,7 @@ def feedback(
         from ..db.db_models import ChatMessage
         msg = db.query(ChatMessage).filter(ChatMessage.id == payload.message_id).first()
         if msg:
-            category = msg.category
+            category = msg.category 
 
     crud.save_feedback(
         db,

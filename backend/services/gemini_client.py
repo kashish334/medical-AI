@@ -71,7 +71,16 @@ def generate_answer(
     question: str,
     retrieved_contexts: list[str],
     conversation_history: list[dict] | None = None,
+    language: str = 'english',
 ) -> str:
+
+    lang_map = {
+        'hindi': 'Hindi (हिंदी)', 'gujarati': 'Gujarati (ગુજરાતી)',
+        'marathi': 'Marathi (मराठी)', 'tamil': 'Tamil (தமிழ்)',
+        'bengali': 'Bengali (বাংলা)',
+    }
+    lang_line = f"- Respond ENTIRELY in {lang_map[language]}. Do not use English except for medical terms." if language in lang_map else ""
+
     context_block = "\n\n---\n\n".join(
         f"Source {i+1}:\n{ctx[:MAX_CONTEXT_CHARS // max(len(retrieved_contexts), 1)]}"
         for i, ctx in enumerate(retrieved_contexts)
@@ -96,6 +105,7 @@ IMPORTANT FORMATTING RULES:
 - Use bullet points when listing symptoms, steps, or multiple items.
 - Keep tone warm, informative, and professional.
 - End EVERY response with: "Please consult a qualified doctor for personal medical advice."
+{lang_line}
 
 {'--- Previous conversation ---' if history_str else ''}
 {history_str}

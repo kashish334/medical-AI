@@ -28,15 +28,74 @@ function getAppHTML() {
       position: fixed; top: 14px; left: 14px; z-index: 1000;
       width: 34px; height: 34px; border-radius: 9px;
       background: var(--bg-card); border: 1px solid var(--border-2);
-      display: flex; align-items: center; justify-content: center;
+      display: none; /* hidden by default when sidebar is open */
+      align-items: center; justify-content: center;
       cursor: pointer; font-size: 16px; color: var(--muted2);
       transition: all 0.2s; box-shadow: 0 2px 8px rgba(0,0,0,0.3);
     }
+    /* Only show floating ☰ when sidebar is collapsed */
+    #app.sidebar-collapsed .sidebar-toggle-btn { display: flex; }
     .sidebar-toggle-btn:hover { border-color: var(--blue); color: var(--blue-bright); background: var(--bg-input); }
 
-    /* Shift top-bar title right when sidebar open so it doesn't clash with toggle */
-    .top-bar { padding-left: 50px; transition: padding-left 0.3s ease; }
-    #app.sidebar-collapsed .top-bar { padding-left: 50px; }
+    /* ═══════════════════════════════════════════════════════════════════════
+       SETTINGS — CSS rules that make every setting actually work in the UI
+       ═══════════════════════════════════════════════════════════════════════ */
+
+    /* ── Font size (--chat-font-size set by JS) ── */
+    .bubble { font-size: var(--chat-font-size, 14px) !important; line-height: 1.65; }
+
+    /* ── Bubble style (data-bubble on body) ── */
+    body[data-bubble="compact"] .bubble {
+      padding: 8px 12px !important; border-radius: 8px !important;
+    }
+    body[data-bubble="minimal"] .bubble {
+      background: transparent !important; border: none !important;
+      padding: 4px 0 !important; box-shadow: none !important;
+    }
+
+    /* ── Confidence badge visibility ── */
+    body.hide-confidence .conf-badge { display: none !important; }
+
+    /* ── Category badge visibility ── */
+    body.hide-category .cat-badge { display: none !important; }
+
+    /* ── Reduce motion ── */
+    body.reduce-motion *, body.reduce-motion *::before, body.reduce-motion *::after {
+      animation-duration: 0.001ms !important;
+      transition-duration: 0.001ms !important;
+    }
+    body.reduce-motion .skeleton-line { animation: none !important; background: var(--bg-input) !important; }
+
+    /* ── High contrast ── */
+    body.high-contrast { --muted: #a0aec0; --muted2: #cbd5e0; --border: rgba(255,255,255,0.2); --border-2: rgba(255,255,255,0.25); }
+    body.high-contrast .bubble { border: 1px solid rgba(255,255,255,0.15) !important; }
+    body.high-contrast .top-bar { border-bottom: 1px solid rgba(255,255,255,0.2); }
+
+    /* ── Large click targets ── */
+    body.large-targets .nav-item { padding: 14px 16px !important; font-size: 14px !important; }
+    body.large-targets .icon-btn { width: 44px !important; height: 44px !important; font-size: 18px !important; }
+    body.large-targets .fb-btn   { font-size: 20px !important; padding: 6px 10px !important; }
+    body.large-targets .settings-row-label { font-size: 14px !important; }
+    body.large-targets input, body.large-targets button, body.large-targets select { min-height: 40px; }
+
+    /* ── Doctor reminder hide ── */
+    body.hide-doctor-reminder .bubble p:last-child,
+    body.hide-doctor-reminder .bubble li:last-child {
+      /* Can't easily target only the reminder line without a class on it,
+         so we use a data approach — JS removes it from content instead */
+    }
+    body[data-theme="darker"] {
+      --bg-deep: #060810; --bg-mid: #0a0c14; --bg-card: #0f1119; --bg-input: #13161f;
+    }
+    body[data-theme="midnight"] {
+      --bg-deep: #050d1a; --bg-mid: #071220; --bg-card: #091628; --bg-input: #0d1e30;
+      --blue: #1d6fb8; --teal: #0e9488;
+    }
+
+    /* Top-bar: no left padding needed since ☰ is inside sidebar when expanded */
+    .top-bar { transition: padding-left 0.3s ease; }
+    /* When collapsed, shift content right so ☰ btn doesn't overlap title */
+    #app.sidebar-collapsed .top-bar { padding-left: 56px; }
 
     .sidebar-brand {
       padding: 20px 20px 16px;
@@ -1756,7 +1815,10 @@ function autoResize(el) {
 }
 
 function handleChatKey(e) {
-  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  if (e.key === 'Enter' && !e.shiftKey) {
+    // Respect the "Send on Enter" setting (default: true)
+    if (window._enterSend !== false) { e.preventDefault(); sendMessage(); }
+  }
 }
 
 async function sendMessage() {
@@ -1798,7 +1860,11 @@ async function sendMessage() {
     const r = await fetch(`${API}/chat/ask`, {
       method:'POST',
       headers:{'Content-Type':'application/json','Authorization':`Bearer ${authToken}`},
-      body: JSON.stringify({ question:q, session_id:sessionId })
+      body: JSON.stringify({
+        question: q,
+        session_id: sessionId,
+        language: (window.MEDAI_SETTINGS||{}).language || 'english',
+      })
     });
 
     if (r.status === 401) { doLogout(); return; }
@@ -1839,8 +1905,8 @@ async function sendMessage() {
         <div>
           <div class="bubble">${markdownToHtml(botMsg.content)}</div>
           <div class="msg-meta">
-            ${cat ? `<span class="cat-badge ${lowWarn?'warn':''}}">${cat}</span>` : ''}
-            ${conf > 0 ? `<span class="conf-label">${conf}% confidence</span>` : ''}
+            ${cat ? `<span class="cat-badge ${lowWarn?'warn':''}">${cat}</span>` : ''}
+            ${conf > 0 ? `<span class="conf-badge conf-label">${conf}% confidence</span>` : ''}
             ${mid ? `
               <button class="fb-btn" id="up_${mid}" onclick="sendFeedback(${mid},1,'up_${mid}','dn_${mid}')">👍</button>
               <button class="fb-btn" id="dn_${mid}" onclick="sendFeedback(${mid},-1,'up_${mid}','dn_${mid}')">👎</button>
@@ -1850,7 +1916,7 @@ async function sendMessage() {
       </div>
     `;
   }
-  chatEl.scrollTop = chatEl.scrollHeight;
+  if (window._autoScroll !== false) chatEl.scrollTop = chatEl.scrollHeight;
 }
 
 function renderMessages() {
@@ -1884,7 +1950,7 @@ function renderMessages() {
           <div class="bubble">${markdownToHtml(cleanAnswer(msg.content))}</div>
           <div class="msg-meta">
             ${cat ? `<span class="cat-badge ${lowWarn?'warn':''}">${cat}</span>` : ''}
-            ${conf > 0 ? `<span class="conf-label">${conf}% confidence</span>` : ''}
+            ${conf > 0 ? `<span class="conf-badge conf-label">${conf}% confidence</span>` : ''}
             ${mid ? `
               <button class="fb-btn" id="up_${mid}" onclick="sendFeedback(${mid},1,'up_${mid}','dn_${mid}')">👍</button>
               <button class="fb-btn" id="dn_${mid}" onclick="sendFeedback(${mid},-1,'up_${mid}','dn_${mid}')">👎</button>
@@ -2376,8 +2442,12 @@ async function sendFeedback(messageId, rating, upId, dnId) {
 
 /* ── Clean answer text ─────────────────────────────────────────────────────── */
 function cleanAnswer(text) {
-  // Remove any accidental "Source N:" references Gemini might still output
-  return (text || '').replace(/Source\s+\d+:\s*/gi, '');
+  let t = (text || '').replace(/Source\s+\d+:\s*/gi, '');
+  // Strip doctor reminder if user turned it off in settings
+  if ((window.MEDAI_SETTINGS||{}).doctorReminder === false) {
+    t = t.replace(/please consult a qualified doctor[^.\n]*\./gi, '').trim();
+  }
+  return t;
 }
 
 /* ── Sidebar toggle ───────────────────────────────────────────────────────── */
@@ -2444,30 +2514,58 @@ function applySetting(key, value) {
 function applyAllSettings(s) {
   const root = document.documentElement;
 
-  // Font size
+  // ── Font size ──────────────────────────────────────────────────────────
   const sizes = { small: '12px', medium: '14px', large: '16px', xlarge: '18px' };
   root.style.setProperty('--chat-font-size', sizes[s.fontsize] || '14px');
 
-  // Sidebar width
+  // ── Sidebar width ──────────────────────────────────────────────────────
   const widths = { compact: '220px', normal: '260px', wide: '300px' };
-  root.style.setProperty('--sidebar-width', widths[s.sidebar] || '260px');
+  const sidebarEl = document.querySelector('.sidebar');
+  if (sidebarEl) sidebarEl.style.width = widths[s.sidebar] || '260px';
+  const appEl = document.getElementById('app');
+  if (appEl && !appEl.classList.contains('sidebar-collapsed')) {
+    appEl.style.gridTemplateColumns = `${widths[s.sidebar] || '260px'} 1fr`;
+  }
 
-  // Accent color
+  // ── Accent color ───────────────────────────────────────────────────────
   if (s.accent) root.style.setProperty('--blue', s.accent);
 
-  // High contrast
-  document.body.classList.toggle('high-contrast', !!s.highContrast);
+  // ── Theme ──────────────────────────────────────────────────────────────
+  document.body.dataset.theme = s.theme || 'dark';
 
-  // Reduce motion
-  document.body.classList.toggle('reduce-motion', !!s.reduceMotion);
-
-  // Large targets
-  document.body.classList.toggle('large-targets', !!s.largeTargets);
-
-  // Bubble style
+  // ── Bubble style ───────────────────────────────────────────────────────
   document.body.dataset.bubble = s.bubble || 'rounded';
 
-  // Confidence/category badges visibility — applied when messages render
+  // ── High contrast ──────────────────────────────────────────────────────
+  document.body.classList.toggle('high-contrast', !!s.highContrast);
+
+  // ── Reduce motion ──────────────────────────────────────────────────────
+  document.body.classList.toggle('reduce-motion', !!s.reduceMotion);
+
+  // ── Large targets ──────────────────────────────────────────────────────
+  document.body.classList.toggle('large-targets', !!s.largeTargets);
+
+  // ── Confidence badge visibility ────────────────────────────────────────
+  document.body.classList.toggle('hide-confidence', s.confidence === false);
+
+  // ── Category badge visibility ──────────────────────────────────────────
+  document.body.classList.toggle('hide-category', s.category === false);
+
+  // ── Auto-scroll (store on window for sendMessage to read) ─────────────
+  window._autoScroll = s.autoScroll !== false;
+
+  // ── Enter to send ──────────────────────────────────────────────────────
+  window._enterSend = s.enterSend !== false;
+
+  // ── Language (stored; prompt builder reads window.MEDAI_SETTINGS) ──────
+  // (sent to Gemini as instruction in sendMessage prompt)
+
+  // ── Doctor reminder (hide/show via CSS) ───────────────────────────────
+  document.body.classList.toggle('hide-doctor-reminder', s.doctorReminder === false);
+
+  // ── Confidence threshold (stored for renderMessages to read) ──────────
+  window._confThreshold = parseInt(s.confThreshold) || 60;
+
   window.MEDAI_SETTINGS = s;
 }
 
