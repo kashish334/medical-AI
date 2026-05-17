@@ -84,3 +84,47 @@ def get_api_key_status(
         "active_provider": provider,
         "keys": result,
     }
+
+
+# ── User Management ────────────────────────────────────────────────────────────
+
+from fastapi import HTTPException
+from pydantic import BaseModel
+
+class UserActionRequest(BaseModel):
+    action: str   # "deactivate" | "activate" | "make_admin" | "remove_admin" | "reset_password" | "delete"
+    value: str = ""  # used for reset_password
+
+
+@router.post("/users/{user_id}/action")
+def user_action(
+    user_id: int,
+    body:    UserActionRequest,
+    db:      Annotated[Session, Depends(get_db)],
+    _admin:  Annotated[User,    Depends(get_admin_user)],
+):
+    """Admin: deactivate/activate/promote/reset/delete a user."""
+    if user_id == _admin.id:
+        raise HTTPException(status_code=400, detail="Cannot modify your own account via this endpoint.")
+
+    action = body.action
+    if action == "deactivate":
+        ok = crud.set_user_active(db, user_id, False)
+    elif action == "activate":
+        ok = crud.set_user_active(db, user_id, True)
+    elif action == "make_admin":
+        ok = crud.set_user_admin(db, user_id, True)
+    elif action == "remove_admin":
+        ok = crud.set_user_admin(db, user_id, False)
+    elif action == "reset_password":
+        if not body.value or len(body.value) < 6:
+            raise HTTPException(status_code=400, detail="New password must be at least 6 characters.")
+        ok = crud.reset_user_password(db, user_id, body.value)
+    elif action == "delete":
+        ok = crud.delete_user(db, user_id)
+    else:
+        raise HTTPException(status_code=400, detail=f"Unknown action: {action}")
+
+    if not ok:
+        raise HTTPException(status_code=404, detail="User not found.")
+    return {"ok": True, "action": action, "user_id": user_id}

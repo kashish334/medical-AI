@@ -386,6 +386,334 @@ function getAppHTML() {
     }
     .export-btn:hover { background: #2563eb; }
 
+    /* ══════════════════════════════════════════════════════════════════════
+       DRUG INTERACTION CHECKER
+       ══════════════════════════════════════════════════════════════════════ */
+    .drug-layout {
+      display: grid; grid-template-columns: 380px 1fr;
+      gap: 24px; padding: 28px; height: calc(100vh - 60px);
+      overflow: hidden; align-items: start;
+    }
+    .drug-input-panel {
+      display: flex; flex-direction: column; gap: 16px;
+      overflow-y: auto; height: 100%;
+      padding-right: 4px;
+    }
+    .drug-result-panel {
+      overflow-y: auto; height: 100%;
+    }
+
+    /* Drug entry rows */
+    .drug-entries { display: flex; flex-direction: column; gap: 10px; }
+    .drug-entry-row {
+      display: flex; gap: 8px; align-items: flex-start;
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 12px; padding: 12px 14px; position: relative;
+      transition: border-color 0.15s;
+    }
+    .drug-entry-row:focus-within { border-color: var(--blue); }
+    .drug-entry-num {
+      width: 22px; height: 22px; border-radius: 6px;
+      background: var(--blue); color: white;
+      font-size: 11px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; margin-top: 2px;
+    }
+    .drug-entry-fields { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+    .drug-name-wrap { position: relative; }
+    .drug-name-input {
+      width: 100%; background: var(--bg-input); border: 1px solid var(--border-2);
+      border-radius: 8px; padding: 9px 12px;
+      font-size: 13px; color: var(--text);
+      font-family: 'Sora', sans-serif; outline: none;
+      box-sizing: border-box;
+    }
+    .drug-name-input:focus { border-color: var(--blue); }
+    .drug-name-input::placeholder { color: var(--muted); }
+    .drug-dosage-input {
+      width: 100%; background: transparent; border: none;
+      border-bottom: 1px solid var(--border);
+      padding: 5px 2px; font-size: 11px; color: var(--muted2);
+      font-family: 'Sora', sans-serif; outline: none;
+      box-sizing: border-box;
+    }
+    .drug-dosage-input::placeholder { color: var(--muted); }
+    .drug-dosage-input:focus { border-bottom-color: var(--blue); }
+    .drug-remove-btn {
+      background: none; border: none; cursor: pointer;
+      color: var(--muted); font-size: 16px; padding: 4px;
+      border-radius: 6px; transition: all 0.15s; flex-shrink: 0;
+    }
+    .drug-remove-btn:hover { background: rgba(239,68,68,0.1); color: var(--danger); }
+
+    /* Autocomplete dropdown */
+    .drug-autocomplete {
+      position: absolute; top: 100%; left: 0; right: 0; z-index: 100;
+      background: var(--bg-card); border: 1px solid var(--border-2);
+      border-radius: 10px; margin-top: 4px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      overflow: hidden;
+    }
+    .drug-autocomplete-item {
+      padding: 9px 14px; font-size: 12px; color: var(--muted2);
+      cursor: pointer; transition: background 0.1s;
+    }
+    .drug-autocomplete-item:hover { background: rgba(59,130,246,0.1); color: var(--text); }
+
+    /* Add drug button */
+    .add-drug-btn {
+      display: flex; align-items: center; gap: 8px;
+      background: none; border: 1px dashed var(--border-2);
+      border-radius: 12px; padding: 12px 16px;
+      font-size: 13px; color: var(--muted2);
+      cursor: pointer; font-family: 'Sora', sans-serif;
+      transition: all 0.15s; width: 100%;
+    }
+    .add-drug-btn:hover { border-color: var(--blue); color: var(--blue-bright); background: rgba(59,130,246,0.05); }
+
+    /* Check button */
+    .check-drug-btn {
+      width: 100%; padding: 14px; border: none; border-radius: 12px;
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      color: white; font-size: 14px; font-weight: 700;
+      font-family: 'Sora', sans-serif; cursor: pointer;
+      transition: all 0.2s; display: flex; align-items: center;
+      justify-content: center; gap: 8px;
+      box-shadow: 0 4px 16px rgba(37,99,235,0.3);
+    }
+    .check-drug-btn:hover { background: linear-gradient(135deg,#1d4ed8,#1e40af); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(37,99,235,0.4); }
+    .check-drug-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+    /* Common drugs quick-pick */
+    .quick-pick-label { font-size: 10px; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 6px; }
+    .quick-pick-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .quick-chip {
+      background: var(--bg-input); border: 1px solid var(--border-2);
+      border-radius: 999px; padding: 4px 12px;
+      font-size: 11px; color: var(--muted2); cursor: pointer;
+      transition: all 0.15s; font-family: 'Sora', sans-serif;
+    }
+    .quick-chip:hover { border-color: var(--blue); color: var(--blue-bright); background: rgba(59,130,246,0.08); }
+
+    /* Results panel */
+    .drug-result-empty {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; height: 400px;
+      color: var(--muted); text-align: center; gap: 12px;
+    }
+    .drug-result-empty .empty-icon { font-size: 52px; opacity: 0.6; }
+    .drug-result-empty h3 { font-size: 16px; font-weight: 700; color: var(--muted2); }
+    .drug-result-empty p  { font-size: 13px; line-height: 1.6; max-width: 280px; }
+
+    /* Severity banner */
+    .severity-banner {
+      border-radius: 14px; padding: 20px 24px; margin-bottom: 20px;
+      display: flex; align-items: center; gap: 16px;
+    }
+    .severity-banner.green  { background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3); }
+    .severity-banner.yellow { background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3); }
+    .severity-banner.orange { background: rgba(249,115,22,0.1); border: 1px solid rgba(249,115,22,0.3); }
+    .severity-banner.red    { background: rgba(239,68,68,0.1);  border: 1px solid rgba(239,68,68,0.3); }
+    .severity-icon { font-size: 36px; flex-shrink: 0; }
+    .severity-level {
+      font-size: 11px; font-weight: 700; letter-spacing: 0.12em;
+      text-transform: uppercase; margin-bottom: 4px;
+    }
+    .severity-banner.green  .severity-level { color: var(--success); }
+    .severity-banner.yellow .severity-level { color: var(--warning); }
+    .severity-banner.orange .severity-level { color: #f97316; }
+    .severity-banner.red    .severity-level { color: var(--danger); }
+    .severity-summary { font-size: 13px; color: var(--text); line-height: 1.6; }
+
+    /* Result sections */
+    .drug-result-section {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 14px; margin-bottom: 16px; overflow: hidden;
+    }
+    .drug-result-section-header {
+      padding: 14px 18px; border-bottom: 1px solid var(--border);
+      font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 8px;
+    }
+    .drug-result-section-body { padding: 16px 18px; }
+
+    /* Interaction cards */
+    .interaction-card {
+      border-radius: 10px; padding: 14px 16px; margin-bottom: 10px;
+      border-left: 4px solid;
+    }
+    .interaction-card:last-child { margin-bottom: 0; }
+    .interaction-card.low      { background: rgba(16,185,129,0.06); border-color: var(--success); }
+    .interaction-card.moderate { background: rgba(245,158,11,0.06); border-color: var(--warning); }
+    .interaction-card.high     { background: rgba(249,115,22,0.08); border-color: #f97316; }
+    .interaction-card.critical { background: rgba(239,68,68,0.08); border-color: var(--danger); }
+    .interaction-drugs { font-size: 12px; font-weight: 700; margin-bottom: 4px; }
+    .interaction-effect { font-size: 12px; color: var(--muted2); line-height: 1.5; }
+    .interaction-mechanism { font-size: 11px; color: var(--muted); margin-top: 4px; font-style: italic; }
+    .interaction-sev-badge {
+      display: inline-block; font-size: 10px; font-weight: 700;
+      padding: 2px 8px; border-radius: 999px; margin-bottom: 6px;
+    }
+
+    /* Side effects grid */
+    .side-effects-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .side-effect-drug { font-size: 12px; font-weight: 700; margin-bottom: 6px; color: var(--blue-bright); }
+    .side-effect-item {
+      display: flex; align-items: flex-start; gap: 6px;
+      font-size: 12px; color: var(--muted2); margin-bottom: 4px; line-height: 1.4;
+    }
+    .side-effect-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--muted); flex-shrink: 0; margin-top: 5px; }
+
+    /* Warnings list */
+    .warning-item {
+      display: flex; gap: 10px; align-items: flex-start;
+      padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 12px;
+      color: var(--muted2); line-height: 1.5;
+    }
+    .warning-item:last-child { border-bottom: none; }
+    .warning-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+
+    /* Recommendation chips */
+    .rec-item {
+      display: flex; gap: 10px; align-items: flex-start;
+      padding: 9px 0; border-bottom: 1px solid var(--border);
+      font-size: 12px; color: var(--muted2); line-height: 1.5;
+    }
+    .rec-item:last-child { border-bottom: none; }
+    .rec-check { color: var(--success); font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+
+    /* Drug info pills */
+    .drug-pills-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+    .drug-pill {
+      background: var(--bg-input); border: 1px solid var(--border-2);
+      border-radius: 999px; padding: 5px 14px;
+      font-size: 12px; color: var(--muted2);
+      display: flex; align-items: center; gap: 6px;
+    }
+    .drug-pill .pill-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--blue); }
+
+    /* Disclaimer */
+    .drug-disclaimer {
+      background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.2);
+      border-radius: 12px; padding: 14px 16px; margin-top: 16px;
+      font-size: 11px; color: var(--muted2); line-height: 1.6;
+      display: flex; gap: 10px; align-items: flex-start;
+    }
+
+    /* Light mode overrides */
+    body.light-mode .drug-entry-row  { background: #fff; border-color: #e2e8f0; }
+    body.light-mode .drug-result-section { background: #fff; border-color: #e2e8f0; }
+    body.light-mode .drug-name-input  { background: #f8fafc; border-color: #e2e8f0; color: #0f172a; }
+    body.light-mode .add-drug-btn     { border-color: #cbd5e1; color: #4b5563; }
+    body.light-mode .quick-chip       { background: #f8fafc; border-color: #e2e8f0; color: #374151; }
+    body.light-mode .interaction-card.low      { background: rgba(16,185,129,0.05); }
+    body.light-mode .interaction-card.moderate { background: rgba(245,158,11,0.05); }
+    body.light-mode .interaction-card.high     { background: rgba(249,115,22,0.05); }
+    body.light-mode .interaction-card.critical { background: rgba(239,68,68,0.05); }
+
+
+    /* ── Streaming cursor ──────────────────────────────────────────────── */
+    .streaming-cursor {
+      display: inline-block; width: 2px; height: 1em;
+      background: var(--blue); margin-left: 2px;
+      animation: blink 0.7s infinite;
+      vertical-align: middle;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+    /* ── Follow-up suggestions ─────────────────────────────────────────── */
+    .suggestions-wrap {
+      display: flex; flex-wrap: wrap; gap: 8px;
+      padding: 8px 0 4px 46px;
+    }
+    .suggestion-chip {
+      background: var(--bg-input); border: 1px solid var(--border-2);
+      border-radius: 999px; padding: 6px 14px;
+      font-size: 12px; color: var(--muted2);
+      cursor: pointer; transition: all 0.15s;
+      font-family: 'Sora', sans-serif;
+    }
+    .suggestion-chip:hover {
+      border-color: var(--blue); color: var(--blue-bright);
+      background: rgba(59,130,246,0.08);
+    }
+
+    /* ── Toast notifications ────────────────────────────────────────────── */
+    #toastContainer {
+      position: fixed; bottom: 24px; right: 24px;
+      display: flex; flex-direction: column; gap: 8px;
+      z-index: 9999; pointer-events: none;
+    }
+    .toast {
+      background: var(--bg-card); border: 1px solid var(--border-2);
+      border-radius: 12px; padding: 12px 18px;
+      font-size: 13px; color: var(--text);
+      box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+      display: flex; align-items: center; gap: 10px;
+      pointer-events: all;
+      animation: toastIn 0.25s ease, toastOut 0.3s ease 2.7s forwards;
+      max-width: 320px;
+    }
+    @keyframes toastIn  { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes toastOut { from{opacity:1;transform:translateY(0)} to{opacity:0;transform:translateY(10px)} }
+    .toast.success { border-left: 3px solid var(--success); }
+    .toast.error   { border-left: 3px solid var(--danger); }
+    .toast.info    { border-left: 3px solid var(--blue); }
+    .toast.warning { border-left: 3px solid var(--warning); }
+
+    /* ── Rate limit button ──────────────────────────────────────────────── */
+    .send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .send-btn.cooldown { background: var(--bg-input); color: var(--muted); }
+
+    /* ── API Key status widget ──────────────────────────────────────────── */
+    .api-key-card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 14px; padding: 16px; margin-bottom: 16px;
+    }
+    .api-key-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 0; border-bottom: 1px solid var(--border);
+    }
+    .api-key-row:last-child { border-bottom: none; padding-bottom: 0; }
+    .api-key-dot {
+      width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+    }
+    .api-key-dot.green { background: var(--success); box-shadow: 0 0 6px var(--success); }
+    .api-key-dot.red   { background: var(--danger);  box-shadow: 0 0 6px var(--danger); }
+    .api-key-dot.amber { background: var(--warning); box-shadow: 0 0 6px var(--warning); }
+    .api-key-info { flex: 1; }
+    .api-key-name  { font-size: 12px; font-weight: 600; }
+    .api-key-stats { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .api-key-badge {
+      font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 999px;
+    }
+    .api-key-badge.active  { background: rgba(16,185,129,0.15); color: var(--success); }
+    .api-key-badge.cooling { background: rgba(245,158,11,0.15); color: var(--warning); }
+    .api-key-badge.tpd     { background: rgba(239,68,68,0.15);  color: var(--danger); }
+
+    /* ── User management modal ─────────────────────────────────────────── */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+      z-index: 9000; display: flex; align-items: center; justify-content: center;
+      backdrop-filter: blur(4px);
+    }
+    .modal-overlay.hidden { display: none; }
+    .modal-box {
+      background: var(--bg-card); border: 1px solid var(--border-2);
+      border-radius: 16px; padding: 28px; width: 440px; max-width: 95vw;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    }
+    .modal-title { font-size: 16px; font-weight: 800; margin-bottom: 6px; }
+    .modal-sub   { font-size: 12px; color: var(--muted); margin-bottom: 20px; }
+    .modal-input {
+      width: 100%; background: var(--bg-input); border: 1px solid var(--border-2);
+      border-radius: 9px; padding: 10px 14px; font-size: 13px;
+      color: var(--text); font-family: 'Sora', sans-serif; outline: none;
+      margin-bottom: 16px; box-sizing: border-box;
+    }
+    .modal-input:focus { border-color: var(--blue); }
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+
+
     /* ── Settings page ───────────────────────────────────────────────────── */
     .settings-layout {
       display: grid; grid-template-columns: 200px 1fr;
@@ -823,7 +1151,10 @@ function getAppHTML() {
           <span class="nav-icon">💬</span> Chat
         </div>
         <div class="nav-item" onclick="showPage('report')" id="nav-report">
-          <span class="nav-icon">📊</span> Report Analyzer
+          <span class="nav-icon">📊</span> Clinical Reports
+        </div>
+        <div class="nav-item" onclick="showPage('drugs')" id="nav-drugs">
+          <span class="nav-icon">💊</span> Drug Interactions
         </div>
         ${currentUser.is_admin ? `<div class="nav-item" onclick="showPage('admin')" id="nav-admin">
           <span class="nav-icon">🎛</span> Admin Dashboard
@@ -1031,6 +1362,10 @@ function getAppHTML() {
           <!-- Overlay to catch outside clicks -->
           <div id="dropdownOverlay" onclick="closeDropdowns()"></div>
 
+          <button id="themeToggleBtn" onclick="toggleLightMode()" title="Toggle light/dark mode"
+            style="background:var(--bg-input);border:1px solid var(--border-2);border-radius:9px;
+                   width:34px;height:34px;cursor:pointer;font-size:16px;display:flex;
+                   align-items:center;justify-content:center;transition:all .2s;">🌙</button>
           <div style="width:1px; height:24px; background:var(--border); margin:0 4px;"></div>
           <button class="export-btn" onclick="exportData()">⬇ Export PDF</button>
         </div>
@@ -1136,9 +1471,9 @@ function getAppHTML() {
                   <div style="display:flex; align-items:center; gap:8px;">
                     <span class="chart-badge">REAL-TIME TELEMETRY</span>
                     <div class="time-toggle">
-                      <button class="time-btn active">24H</button>
-                      <button class="time-btn">7D</button>
-                      <button class="time-btn">1M</button>
+                      <button class="time-btn active" onclick="switchChartPeriod(this,'1')">24H</button>
+                      <button class="time-btn" onclick="switchChartPeriod(this,'7')">7D</button>
+                      <button class="time-btn" onclick="switchChartPeriod(this,'30')">1M</button>
                     </div>
                   </div>
                 </div>
@@ -1169,11 +1504,32 @@ function getAppHTML() {
               <div class="chart-header"><div class="chart-title">Most Asked Diseases</div></div>
               <div id="diseasesChart"><div style="color:var(--muted); font-size:12px;">Loading…</div></div>
             </div>
+            <!-- API Key Health Widget -->
+            <div class="chart-card">
+              <div class="chart-header" style="display:flex;align-items:center;justify-content:space-between;">
+                <div class="chart-title">🔑 API Key Health</div>
+                <button onclick="refreshApiKeyStatus()"
+                  style="background:none;border:1px solid var(--border-2);border-radius:7px;padding:4px 12px;
+                         cursor:pointer;color:var(--muted2);font-size:12px;font-family:'Sora',sans-serif;
+                         transition:all .15s;"
+                  onmouseover="this.style.borderColor='var(--blue)';this.style.color='var(--blue-bright)'"
+                  onmouseout="this.style.borderColor='var(--border-2)';this.style.color='var(--muted2)'">
+                  ↻ Refresh
+                </button>
+              </div>
+              <div id="apiKeyStatusBody">
+                <div style="color:var(--muted);font-size:12px;padding:20px;text-align:center;">
+                  Loading key status…
+                </div>
+              </div>
+            </div>
+
             <div class="chart-card">
               <div class="chart-header"><div class="chart-title">User Activity</div></div>
               <table class="users-table">
                 <thead><tr>
                   <th>User</th><th>Top Disease</th><th>Total Queries</th><th>Reports</th><th>Positive Feedback</th><th>Last Active</th>
+                  <th>Actions</th>
                 </tr></thead>
                 <tbody id="usersTable"><tr><td colspan="5" style="color:var(--muted);font-size:12px;padding:16px;">Loading…</td></tr></tbody>
               </table>
@@ -1210,6 +1566,7 @@ function getAppHTML() {
                     <div class="settings-row-desc">Choose your preferred color scheme</div>
                   </div>
                   <select class="settings-select" id="s-theme" onchange="applySetting('theme',this.value)">
+                    <option value="light">☀️ Light</option>
                     <option value="dark">🌙 Dark</option>
                     <option value="darker">⚫ Darker</option>
                     <option value="midnight">🔵 Midnight Blue</option>
@@ -1651,9 +2008,113 @@ function getAppHTML() {
           </div>
         </div>
       </div><!-- page-support -->
+      <!-- Drug Interaction Checker Page -->
+      <div class="page" id="page-drugs" style="overflow:hidden; height:calc(100vh - 60px);">
+        <div class="drug-layout">
+
+          <!-- LEFT: Input Panel -->
+          <div class="drug-input-panel">
+            <div style="font-size:13px; color:var(--muted2); line-height:1.6; padding:4px 0 8px;">
+              Enter up to <b>5 medicines</b> with optional dosage. MedAI checks for interactions,
+              side effects, and warnings using <b>FDA</b> + <b>RxNorm</b> data, analysed by <b>Gemini AI</b>.
+            </div>
+
+            <!-- Drug entry rows -->
+            <div class="drug-entries" id="drugEntries">
+              <div class="drug-entry-row" data-index="0">
+                <div class="drug-entry-num">1</div>
+                <div class="drug-entry-fields">
+                  <div class="drug-name-wrap">
+                    <input type="text" class="drug-name-input" placeholder="Drug / Medicine name…"
+                      oninput="handleDrugInput(this, 0)" onblur="hideSuggestions(0)" autocomplete="off">
+                    <div class="drug-autocomplete" id="ac-0" style="display:none;"></div>
+                  </div>
+                  <input type="text" class="drug-dosage-input" placeholder="Dosage (optional) e.g. 500mg twice daily">
+                </div>
+              </div>
+              <div class="drug-entry-row" data-index="1">
+                <div class="drug-entry-num">2</div>
+                <div class="drug-entry-fields">
+                  <div class="drug-name-wrap">
+                    <input type="text" class="drug-name-input" placeholder="Drug / Medicine name…"
+                      oninput="handleDrugInput(this, 1)" onblur="hideSuggestions(1)" autocomplete="off">
+                    <div class="drug-autocomplete" id="ac-1" style="display:none;"></div>
+                  </div>
+                  <input type="text" class="drug-dosage-input" placeholder="Dosage (optional) e.g. 10mg once daily">
+                </div>
+                <button class="drug-remove-btn" onclick="removeDrugRow(this)" title="Remove">✕</button>
+              </div>
+            </div>
+
+            <button class="add-drug-btn" id="addDrugBtn" onclick="addDrugRow()">
+              <span style="font-size:18px;">+</span> Add another drug
+            </button>
+
+            <!-- Quick pick common drugs -->
+            <div>
+              <div class="quick-pick-label">Common medicines — click to add</div>
+              <div class="quick-pick-chips">
+                ${['Aspirin','Metformin','Atorvastatin','Lisinopril','Omeprazole',
+                   'Amoxicillin','Paracetamol','Ibuprofen','Warfarin','Metoprolol'].map(d =>
+                  `<button class="quick-chip" onclick="quickAddDrug('${d}')">${d}</button>`
+                ).join('')}
+              </div>
+            </div>
+
+            <!-- Check button -->
+            <button class="check-drug-btn" id="checkDrugBtn" onclick="checkDrugs()">
+              🔬 Check Interactions
+            </button>
+
+            <!-- Info box -->
+            <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:12px; padding:14px 16px;">
+              <div style="font-size:11px; font-weight:700; color:var(--muted); letter-spacing:0.08em; text-transform:uppercase; margin-bottom:8px;">Data Sources</div>
+              <div style="display:flex; flex-direction:column; gap:6px;">
+                <div style="display:flex; align-items:center; gap:8px; font-size:12px; color:var(--muted2);">
+                  <span style="width:8px;height:8px;border-radius:50%;background:var(--success);flex-shrink:0;"></span>
+                  <b>OpenFDA</b> — Official FDA drug labels, warnings & adverse reactions
+                </div>
+                <div style="display:flex; align-items:center; gap:8px; font-size:12px; color:var(--muted2);">
+                  <span style="width:8px;height:8px;border-radius:50%;background:var(--blue);flex-shrink:0;"></span>
+                  <b>RxNorm (NLM)</b> — Drug normalization & interaction database
+                </div>
+                <div style="display:flex; align-items:center; gap:8px; font-size:12px; color:var(--muted2);">
+                  <span style="width:8px;height:8px;border-radius:50%;background:var(--teal);flex-shrink:0;"></span>
+                  <b>Gemini 2.5 Flash</b> — AI synthesis & clinical interpretation
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- RIGHT: Results Panel -->
+          <div class="drug-result-panel" id="drugResultPanel">
+            <div class="drug-result-empty" id="drugEmptyState">
+              <div class="empty-icon">💊</div>
+              <h3>Enter drugs to check</h3>
+              <p>Add at least one medicine on the left and click <b>Check Interactions</b> to see a full safety analysis.</p>
+            </div>
+            <div id="drugResultBody" style="display:none;"></div>
+          </div>
+
+        </div>
+      </div><!-- page-drugs -->
+
+
 
     </div><!-- main-content -->
   </div><!-- app -->
+  <div id="toastContainer"></div>
+  <div class="modal-overlay hidden" id="modalOverlay">
+    <div class="modal-box" id="modalBox">
+      <div class="modal-title" id="modalTitle">Reset Password</div>
+      <div class="modal-sub"  id="modalSub">Enter a new password for this user.</div>
+      <input type="password" class="modal-input" id="modalInput" placeholder="New password (min 6 chars)">
+      <div class="modal-actions">
+        <button class="settings-btn secondary" onclick="closeModal()">Cancel</button>
+        <button class="settings-btn primary"   id="modalConfirm" onclick="confirmModal()">Confirm</button>
+      </div>
+    </div>
+  </div>
   `;
 }
 
@@ -1681,6 +2142,9 @@ function initApp() {
   loadSidebarHistory();
   loadPastReports();
   if (currentUser.is_admin) loadAdminData();
+  // Restore light mode button state
+  const tmBtn = document.getElementById('themeToggleBtn');
+  if (tmBtn) tmBtn.textContent = document.body.classList.contains('light-mode') ? '🌙' : '☀️';
   // Apply any saved settings immediately
   const saved = JSON.parse(localStorage.getItem('medai_settings') || '{}');
   applyAllSettings({ ...SETTINGS_DEFAULTS, ...saved });
@@ -1779,6 +2243,7 @@ const PAGE_META = {
   report:   { title:'Report Analyzer', sub:'Upload and interpret medical documents with AI' },
   admin:    { title:'System Overview',  sub:'Real-time performance and clinical engagement metrics.' },
   settings: { title:'Settings',         sub:'Customize your MedAI experience' },
+  drugs:    { title:'Drug Interaction Checker', sub:'Check drug combinations, side effects and warnings powered by FDA + Gemini AI' },
   support:  { title:'Support',          sub:'Help, resources, and emergency contacts' },
 };
 
@@ -1797,6 +2262,7 @@ function showPage(page) {
   if (page === 'admin' && currentUser.is_admin) { document.getElementById(`page-${page}`).style.display = 'block'; loadAdminData(); }
   if (page === 'settings') { document.getElementById(`page-${page}`).style.display = 'flex'; loadSettingsFromStorage(); }
   if (page === 'support')  { document.getElementById(`page-${page}`).style.display = 'block'; }
+  if (page === 'drugs')    { document.getElementById(`page-${page}`).style.display = 'block'; }
 }
 
 /* ── Chat ─────────────────────────────────────────────────────────────────── */
@@ -1822,101 +2288,194 @@ function handleChatKey(e) {
 }
 
 async function sendMessage() {
-  const input = document.getElementById('chatInput');
+  const input   = document.getElementById('chatInput');
+  const sendBtn = document.getElementById('sendBtn');
   const q = input.value.trim();
   if (!q) return;
+
+  // ── Rate limiting: disable send button for 1.5s ──────────────────────────
+  if (sendBtn.disabled) return;
+  sendBtn.disabled = true;
+  sendBtn.classList.add('cooldown');
+  setTimeout(() => {
+    sendBtn.disabled = false;
+    sendBtn.classList.remove('cooldown');
+  }, 1500);
 
   input.value = ''; autoResize(input);
   messages.push({ role:'user', content:q });
 
   const chatEl = document.getElementById('chatMessages');
-  const empty = document.getElementById('chatEmpty');
+  const empty  = document.getElementById('chatEmpty');
   if (empty) empty.style.display = 'none';
 
-  // Append user bubble directly without full redraw
+  // Remove previous suggestions
+  document.querySelectorAll('.suggestions-wrap').forEach(el => el.remove());
+
   chatEl.insertAdjacentHTML('beforeend', `
-    <div class="msg-user">
-      <div class="bubble">${escHtml(q)}</div>
-    </div>
+    <div class="msg-user"><div class="bubble">${escHtml(q)}</div></div>
   `);
 
-  // Append skeleton immediately after user bubble
-  const loadId = 'loading_' + Date.now();
+  // Skeleton loading bubble
+  const streamId  = 'stream_' + Date.now();
+  const bubbleId  = 'bubble_' + Date.now();
   chatEl.insertAdjacentHTML('beforeend', `
-    <div class="msg-bot" id="${loadId}">
+    <div class="msg-bot" id="${streamId}">
       <div class="bot-avatar">⚕</div>
-      <div class="bubble skeleton-bubble-wrap">
-        <div class="skel-line" style="width:88%"></div>
-        <div class="skel-line" style="width:72%"></div>
-        <div class="skel-line" style="width:80%"></div>
-        <div class="skel-line" style="width:55%"></div>
+      <div style="flex:1; min-width:0;">
+        <div class="bubble skeleton-active" id="${bubbleId}">
+          <div class="skel-line" style="width:88%;"></div>
+          <div class="skel-line" style="width:72%;margin-top:8px;"></div>
+          <div class="skel-line" style="width:80%;margin-top:8px;"></div>
+          <div class="skel-line" style="width:55%;margin-top:8px;"></div>
+        </div>
+        <div class="msg-meta" id="meta_${streamId}"></div>
       </div>
     </div>
   `);
-  chatEl.scrollTop = chatEl.scrollHeight;
+  if (window._autoScroll !== false) chatEl.scrollTop = chatEl.scrollHeight;
 
-  let botMsg = null;
+  let fullText = '';
+  let metadata = null;
+
   try {
-    const r = await fetch(`${API}/chat/ask`, {
-      method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':`Bearer ${authToken}`},
+    // Try streaming first, fall back to regular endpoint if 404
+    let useStream = true;
+    let resp = await fetch(`${API}/stream/ask`, {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${authToken}` },
       body: JSON.stringify({
-        question: q,
-        session_id: sessionId,
+        question: q, session_id: sessionId,
         language: (window.MEDAI_SETTINGS||{}).language || 'english',
-      })
+      }),
     });
 
-    if (r.status === 401) { doLogout(); return; }
-    if (!r.ok) {
-      let detail = `Server error (${r.status})`;
-      try { detail = (await r.json()).detail || detail; } catch{}
-      botMsg = { role:'assistant', content:`❌ ${detail}`, category:'error', confidence:0, low_confidence:true, message_id:null };
+    // Fallback to /chat/ask if stream endpoint not available
+    if (resp.status === 404 || resp.status === 405) {
+      useStream = false;
+      resp = await fetch(`${API}/chat/ask`, {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${authToken}` },
+        body: JSON.stringify({
+          question: q, session_id: sessionId,
+          language: (window.MEDAI_SETTINGS||{}).language || 'english',
+        }),
+      });
+    }
+
+    if (resp.status === 401) { doLogout(); return; }
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      const errText = '❌ ' + (err.detail || `Server error (${resp.status})`);
+      document.getElementById(bubbleId).innerHTML = markdownToHtml(errText);
+      return;
+    }
+
+    if (!useStream) {
+      // Regular (non-streaming) response
+      const d = await resp.json();
+      fullText = d.answer || '';
+      metadata = { intent: d.intent, category: d.category, confidence: d.confidence, low_confidence: d.low_confidence, message_id: d.message_id, done: true };
+      const bub = document.getElementById(bubbleId);
+      if (bub) bub.innerHTML = markdownToHtml(cleanAnswer(fullText));
     } else {
-      const d = await r.json();
-      botMsg = { role:'assistant', content:d.answer, category:d.category, confidence:d.confidence, low_confidence:d.low_confidence, message_id:d.message_id };
+      // Streaming SSE response
+      const reader  = resp.body.getReader();
+      const decoder = new TextDecoder();
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const raw = decoder.decode(value, { stream: true });
+        for (const line of raw.split('\n')) {
+          if (!line.startsWith('data: ')) continue;
+          try {
+            const data = JSON.parse(line.slice(6));
+            if (data.token !== undefined) {
+              fullText += data.token;
+              // Keep skeleton visible during streaming - just collect tokens silently
+            }
+            if (data.done) { metadata = data; }
+          } catch {}
+        }
+      }
     }
   } catch(e) {
-    botMsg = { role:'assistant', content:'❌ Cannot reach backend. Is the server running?', category:'error', confidence:0, low_confidence:true, message_id:null };
+    fullText = '❌ Cannot reach backend. Is the server running?';
+    metadata = { intent:'error', category:'error', confidence:0, low_confidence:true, message_id:null };
   }
 
-  messages.push(botMsg);
-
-  // After first exchange, refresh sidebar so the title appears
-  if (messages.filter(m => m.role === 'user').length === 1) {
-    loadSidebarHistory();
-  } else {
-    // Just update active state without full reload
-    document.querySelectorAll('.history-item').forEach(el => {
-      el.classList.toggle('active', el.id === `hist_${sessionId}`);
-    });
+  // Replace skeleton with final rendered content
+  const bub = document.getElementById(bubbleId);
+  if (bub) {
+    bub.classList.remove('skeleton-active');
+    bub.innerHTML = markdownToHtml(cleanAnswer(fullText));
+    if (window._autoScroll !== false) chatEl.scrollTop = chatEl.scrollHeight;
   }
 
-  // Replace skeleton directly with answer — no full redraw, no blank flash
-  const skelEl = document.getElementById(loadId);
-  if (skelEl) {
-    const conf    = ((botMsg.confidence||0)*100).toFixed(0);
-    const cat     = (botMsg.category||'').replace(/_/g,' ');
-    const lowWarn = botMsg.low_confidence;
-    const mid     = botMsg.message_id;
-    skelEl.outerHTML = `
-      <div class="msg-bot">
-        <div class="bot-avatar">⚕</div>
-        <div>
-          <div class="bubble">${markdownToHtml(botMsg.content)}</div>
-          <div class="msg-meta">
-            ${cat ? `<span class="cat-badge ${lowWarn?'warn':''}">${cat}</span>` : ''}
-            ${conf > 0 ? `<span class="conf-badge conf-label">${conf}% confidence</span>` : ''}
-            ${mid ? `
-              <button class="fb-btn" id="up_${mid}" onclick="sendFeedback(${mid},1,'up_${mid}','dn_${mid}')">👍</button>
-              <button class="fb-btn" id="dn_${mid}" onclick="sendFeedback(${mid},-1,'up_${mid}','dn_${mid}')">👎</button>
-            ` : ''}
-          </div>
-        </div>
-      </div>
+  const meta = metadata || {};
+  const conf    = ((meta.confidence||0)*100).toFixed(0);
+  const cat     = (meta.category||'').replace(/_/g,' ');
+  const lowWarn = meta.low_confidence;
+  const mid     = meta.message_id;
+
+  const metaEl = document.getElementById(`meta_${streamId}`);
+  if (metaEl) {
+    metaEl.innerHTML = `
+      ${cat ? `<span class="cat-badge ${lowWarn?'warn':''}">${cat}</span>` : ''}
+      ${conf > 0 ? `<span class="conf-badge conf-label">${conf}% confidence</span>` : ''}
+      ${mid ? `
+        <button class="fb-btn" id="up_${mid}" onclick="sendFeedback(${mid},1,'up_${mid}','dn_${mid}')">👍</button>
+        <button class="fb-btn" id="dn_${mid}" onclick="sendFeedback(${mid},-1,'up_${mid}','dn_${mid}')">👎</button>
+      ` : ''}
     `;
   }
+
+  const botMsg = { role:'assistant', content:fullText, category:meta.category, confidence:meta.confidence, low_confidence:meta.low_confidence, message_id:mid };
+  messages.push(botMsg);
+
+  if (messages.filter(m => m.role === 'user').length === 1) {
+    loadSidebarHistory();
+  }
   if (window._autoScroll !== false) chatEl.scrollTop = chatEl.scrollHeight;
+
+  // ── Fetch follow-up suggestions ──────────────────────────────────────────
+  if (mid && meta.category !== 'error' && meta.category !== 'off_topic') {
+    fetchSuggestions(q, streamId);
+  }
+}
+
+async function fetchSuggestions(question, afterId) {
+  try {
+    const r = await fetch(`${API}/stream/suggestions`, {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${authToken}` },
+      body: JSON.stringify({ question, session_id: sessionId }),
+    });
+    if (!r.ok) return;
+    const data = await r.json();
+    const suggestions = data.suggestions || [];
+    if (!suggestions.length) return;
+
+    const chatEl = document.getElementById('chatMessages');
+    const afterEl = document.getElementById(afterId);
+    const chips = suggestions.map(s =>
+      `<button class="suggestion-chip" onclick="useSuggestion('${s.replace(/'/g, "\'")}')">${escHtml(s)}</button>`
+    ).join('');
+    const wrap = document.createElement('div');
+    wrap.className = 'suggestions-wrap';
+    wrap.innerHTML = chips;
+    if (afterEl) afterEl.insertAdjacentElement('afterend', wrap);
+    else chatEl.appendChild(wrap);
+    if (window._autoScroll !== false) chatEl.scrollTop = chatEl.scrollHeight;
+  } catch {}
+}
+
+function useSuggestion(text) {
+  const input = document.getElementById('chatInput');
+  if (input) { input.value = text; autoResize(input); input.focus(); }
+  document.querySelectorAll('.suggestions-wrap').forEach(el => el.remove());
+  sendMessage();
 }
 
 function renderMessages() {
@@ -2113,6 +2672,9 @@ async function loadAdminData() {
     // Users table
     renderUsersTable(users);
 
+    // API key status widget
+    refreshApiKeyStatus();
+
   } catch(e) { console.error('Admin data error:', e); }
 }
 
@@ -2129,15 +2691,46 @@ function updateKpi(key, value, delta) {
   });
 }
 
+// Store full dataset for period switching
+let _adminChartData = [];
+
 function renderActivityChart(data) {
+  _adminChartData = data || [];
+  _drawChart(_adminChartData, 1);
+}
+
+function switchChartPeriod(btn, days) {
+  // Update active button state
+  document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  _drawChart(_adminChartData, parseInt(days));
+}
+
+function _drawChart(data, days) {
   const el = document.getElementById('activityChart');
-  if (!el || !data.length) { if(el) el.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:20px;">No activity data yet.</div>'; return; }
-  const max = Math.max(...data.map(d => d.count), 1);
-  const recent = data.slice(-14);
-  el.innerHTML = recent.map(d => `
+  if (!el) return;
+  if (!data.length) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:20px;">No activity data yet.</div>';
+    return;
+  }
+
+  // days=1 → last 1 day (today), days=7 → last 7 days, days=30 → last 30 days
+  const sliced = days === 1 ? data.slice(-1) : days === 7 ? data.slice(-7) : data.slice(-30);
+
+  // If only 1 day, show hourly-style (just 1 bar with today's count)
+  const max = Math.max(...sliced.map(d => d.count), 1);
+
+  el.innerHTML = sliced.map(d => `
     <div class="bar-wrap">
-      <div class="bar" style="--bar-color:#1e3a6e; height:${Math.max(8,(d.count/max)*140)}px; background:linear-gradient(to top, #1e3a6e, #3b82f6);"></div>
-      <div class="bar-label">${d.date?.slice(5) || ''}</div>
+      <div class="bar" style="height:${Math.max(8,(d.count/max)*140)}px;
+           background:linear-gradient(to top,#1e3a6e,#3b82f6);"></div>
+      <div class="bar-label">${
+        days === 1
+          ? (d.date || 'Today')
+          : days === 7
+          ? (d.date?.slice(5) || '')
+          : (d.date?.slice(5) || '')
+      }</div>
     </div>
   `).join('');
 }
@@ -2248,6 +2841,26 @@ function renderUsersTable(users) {
         </div>
       </td>
       <td style="font-size:11px;color:var(--muted);">${u.last_active}</td>
+      <td>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          ${u.is_active !== false
+            ? `<button onclick="userAction(${u.user_id},'${u.username}','deactivate')"
+                style="font-size:10px;padding:3px 8px;border-radius:6px;background:rgba(245,158,11,.1);color:var(--warning);border:1px solid rgba(245,158,11,.3);cursor:pointer;font-family:'Sora',sans-serif;">⏸ Deactivate</button>`
+            : `<button onclick="userAction(${u.user_id},'${u.username}','activate')"
+                style="font-size:10px;padding:3px 8px;border-radius:6px;background:rgba(16,185,129,.1);color:var(--success);border:1px solid rgba(16,185,129,.3);cursor:pointer;font-family:'Sora',sans-serif;">▶ Activate</button>`
+          }
+          <button onclick="userAction(${u.user_id},'${u.username}','reset_password')"
+            style="font-size:10px;padding:3px 8px;border-radius:6px;background:rgba(59,130,246,.1);color:var(--blue-bright);border:1px solid rgba(59,130,246,.3);cursor:pointer;font-family:'Sora',sans-serif;">🔑 Reset</button>
+          ${u.is_admin
+            ? `<button onclick="userAction(${u.user_id},'${u.username}','remove_admin')"
+                style="font-size:10px;padding:3px 8px;border-radius:6px;background:rgba(139,92,246,.1);color:#a78bfa;border:1px solid rgba(139,92,246,.3);cursor:pointer;font-family:'Sora',sans-serif;">⬇ Demote</button>`
+            : `<button onclick="userAction(${u.user_id},'${u.username}','make_admin')"
+                style="font-size:10px;padding:3px 8px;border-radius:6px;background:rgba(139,92,246,.1);color:#a78bfa;border:1px solid rgba(139,92,246,.3);cursor:pointer;font-family:'Sora',sans-serif;">⬆ Promote</button>`
+          }
+          <button onclick="userAction(${u.user_id},'${u.username}','delete')"
+            style="font-size:10px;padding:3px 8px;border-radius:6px;background:rgba(239,68,68,.1);color:var(--danger);border:1px solid rgba(239,68,68,.3);cursor:pointer;font-family:'Sora',sans-serif;">🗑 Delete</button>
+        </div>
+      </td>
     </tr>`;
   }).join('');
 }
@@ -2421,14 +3034,15 @@ async function sendFeedback(messageId, rating, upId, dnId) {
       }),
     });
 
-    if (!r.ok) {
-      // Revert on failure
+    if (r.ok) {
+      showToast('Feedback saved — thank you!', 'success', '👍');
+    } else {
       upBtn.classList.remove('active-up');
       dnBtn.classList.remove('active-dn');
       upBtn.disabled = false;
       dnBtn.disabled = false;
       const d = await r.json().catch(() => ({}));
-      console.error('Feedback error:', d.detail || r.status);
+      showToast('Feedback error: ' + (d.detail || r.status), 'error');
     }
   } catch (e) {
     // Revert on network error
@@ -2532,6 +3146,13 @@ function applyAllSettings(s) {
 
   // ── Theme ──────────────────────────────────────────────────────────────
   document.body.dataset.theme = s.theme || 'dark';
+  // Light mode
+  const isLight = s.theme === 'light';
+  document.body.classList.toggle('light-mode', isLight);
+  const tBtn = document.getElementById('themeToggleBtn');
+  if (tBtn) tBtn.textContent = isLight ? '🌙' : '☀️';
+  if (isLight) localStorage.setItem('medai_light_mode', '1');
+  else localStorage.removeItem('medai_light_mode');
 
   // ── Bubble style ───────────────────────────────────────────────────────
   document.body.dataset.bubble = s.bubble || 'rounded';
@@ -2591,6 +3212,7 @@ function switchSettingsTab(tab) {
 
 async function clearAllHistory() {
   if (!confirm('Delete ALL your chat history? This cannot be undone.')) return;
+  showToast('Clearing all history…', 'info');
   try {
     const sessions = await fetch(`${API}/chat/sessions`, {
       headers: { 'Authorization': `Bearer ${authToken}` }
@@ -2626,6 +3248,486 @@ async function deleteAccount() {
 
 // Apply settings on every page load
 window.MEDAI_SETTINGS = SETTINGS_DEFAULTS;
+
+
+/* ── Toast notifications ──────────────────────────────────────────────────── */
+function showToast(message, type = 'info', icon = '') {
+  const icons = { success:'✅', error:'❌', info:'ℹ️', warning:'⚠️' };
+  const container = document.getElementById('toastContainer');
+  if (!container) return;
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.innerHTML = `<span>${icon || icons[type]}</span> ${escHtml(message)}`;
+  container.appendChild(toast);
+  setTimeout(() => toast.remove(), 3200);
+}
+
+/* ── Light / Dark mode toggle ─────────────────────────────────────────────── */
+function toggleLightMode() {
+  const isLight = document.body.classList.toggle('light-mode');
+  localStorage.setItem('medai_light_mode', isLight ? '1' : '0');
+  const btn = document.getElementById('themeToggleBtn');
+  if (btn) btn.textContent = isLight ? '🌙' : '☀️';
+  const sel = document.getElementById('s-theme');
+  if (sel) sel.value = isLight ? 'light' : 'dark';
+  showToast(isLight ? 'Switched to Light Mode' : 'Switched to Dark Mode', 'info');
+}
+
+(function restoreLightMode() {
+  if (localStorage.getItem('medai_light_mode') === '1') {
+    document.body.classList.add('light-mode');
+    // btn not rendered yet — will be set after render
+  }
+})();
+
+/* ── API Key Status widget ────────────────────────────────────────────────── */
+async function refreshApiKeyStatus() {
+  const el = document.getElementById('apiKeyStatusBody');
+  if (!el) return;
+  el.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px 0;">Refreshing…</div>';
+  try {
+    const r = await fetch(`${API}/admin/api-keys/status`, {
+      headers: { 'Authorization': `Bearer ${authToken}` }
+    });
+    if (!r.ok) { el.innerHTML = '<div style="color:var(--danger);font-size:12px;">Could not load key status.</div>'; return; }
+    const data = await r.json();
+    const provider = data.active_provider || 'gemini';
+    const keys = data.keys?.[provider] || [];
+    if (keys.error) { el.innerHTML = `<div style="color:var(--danger);font-size:12px;">${keys.error}</div>`; return; }
+    el.innerHTML = `
+      <div style="font-size:11px;color:var(--muted);margin-bottom:12px;">Provider: <b style="color:var(--text);">${provider.toUpperCase()}</b></div>
+      ${keys.map((k, i) => {
+        const dotClass = k.tpd_exceeded ? 'red' : k.tpm_exceeded ? 'amber' : 'green';
+        const badge    = k.tpd_exceeded ? 'tpd' : k.tpm_exceeded ? 'cooling' : 'active';
+        const badgeTxt = k.tpd_exceeded ? 'TPD Limit' : k.tpm_exceeded ? `Cooling ${k.tpm_resets_in_s}s` : 'Active';
+        const isActive = k.active ? ' (current)' : '';
+        return `<div class="api-key-row">
+          <div class="api-key-dot ${dotClass}"></div>
+          <div class="api-key-info">
+            <div class="api-key-name">Key ${i+1}${isActive} — …${k.key_suffix}</div>
+            <div class="api-key-stats">Tokens this min: ${k.tokens_this_min} &nbsp;·&nbsp; Tokens today: ${k.tokens_today}</div>
+          </div>
+          <span class="api-key-badge ${badge}">${badgeTxt}</span>
+        </div>`;
+      }).join('')}
+    `;
+  } catch(e) {
+    el.innerHTML = `<div style="color:var(--danger);font-size:12px;">Error: ${e.message}</div>`;
+  }
+}
+
+/* ── User management modal ────────────────────────────────────────────────── */
+let _modalCallback = null;
+
+function openModal(title, sub, confirmLabel, callback, showInput = false) {
+  document.getElementById('modalTitle').textContent   = title;
+  document.getElementById('modalSub').textContent     = sub;
+  document.getElementById('modalConfirm').textContent = confirmLabel;
+  document.getElementById('modalInput').style.display = showInput ? 'block' : 'none';
+  document.getElementById('modalInput').value         = '';
+  document.getElementById('modalOverlay').classList.remove('hidden');
+  _modalCallback = callback;
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.add('hidden');
+  _modalCallback = null;
+}
+
+async function confirmModal() {
+  const inputVal = document.getElementById('modalInput').value.trim();
+  if (_modalCallback) await _modalCallback(inputVal);
+  closeModal();
+}
+
+async function userAction(userId, username, action) {
+  const labels = {
+    deactivate:     [`Deactivate ${username}`, `This will prevent ${username} from logging in.`, 'Deactivate', false],
+    activate:       [`Activate ${username}`,   `Re-enable ${username}'s account.`,               'Activate',   false],
+    make_admin:     [`Promote ${username}`,     `Give ${username} admin privileges.`,              'Promote',    false],
+    remove_admin:   [`Demote ${username}`,      `Remove admin privileges from ${username}.`,       'Demote',     false],
+    reset_password: [`Reset Password`,          `Set a new password for ${username}.`,             'Reset',      true ],
+    delete:         [`Delete ${username}`,      `Permanently delete ${username} and ALL their data. Cannot be undone.`, 'Delete', false],
+  };
+  const [title, sub, confirmTxt, showInput] = labels[action];
+  openModal(title, sub, confirmTxt, async (inputVal) => {
+    const body = { action };
+    if (action === 'reset_password') {
+      if (!inputVal || inputVal.length < 6) { showToast('Password must be at least 6 characters', 'error'); return; }
+      body.value = inputVal;
+    }
+    try {
+      const r = await fetch(`${API}/admin/users/${userId}/action`, {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${authToken}` },
+        body: JSON.stringify(body),
+      });
+      const d = await r.json();
+      if (r.ok) {
+        showToast(`${action.replace('_',' ')} successful for ${username}`, 'success');
+        loadAdminData(); // refresh table
+      } else {
+        showToast(d.detail || 'Action failed', 'error');
+      }
+    } catch(e) {
+      showToast('Network error: ' + e.message, 'error');
+    }
+  }, showInput);
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   DRUG INTERACTION CHECKER
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+let _drugRowCount = 2;    // starts with 2 rows
+let _acTimers = {};       // autocomplete debounce timers
+
+// ── Row management ─────────────────────────────────────────────────────────────
+
+function addDrugRow() {
+  if (_drugRowCount >= 5) {
+    showToast('Maximum 5 drugs per check', 'warning');
+    return;
+  }
+  const idx = _drugRowCount;
+  const container = document.getElementById('drugEntries');
+  const div = document.createElement('div');
+  div.className = 'drug-entry-row';
+  div.dataset.index = idx;
+  div.innerHTML = `
+    <div class="drug-entry-num">${idx + 1}</div>
+    <div class="drug-entry-fields">
+      <div class="drug-name-wrap">
+        <input type="text" class="drug-name-input" placeholder="Drug / Medicine name…"
+          oninput="handleDrugInput(this, ${idx})" onblur="hideSuggestions(${idx})" autocomplete="off">
+        <div class="drug-autocomplete" id="ac-${idx}" style="display:none;"></div>
+      </div>
+      <input type="text" class="drug-dosage-input" placeholder="Dosage (optional)">
+    </div>
+    <button class="drug-remove-btn" onclick="removeDrugRow(this)" title="Remove">✕</button>
+  `;
+  container.appendChild(div);
+  _drugRowCount++;
+  div.querySelector('.drug-name-input').focus();
+  if (_drugRowCount >= 5) {
+    document.getElementById('addDrugBtn').disabled = true;
+    document.getElementById('addDrugBtn').style.opacity = '0.4';
+  }
+}
+
+function removeDrugRow(btn) {
+  const row = btn.closest('.drug-entry-row');
+  row.remove();
+  _drugRowCount--;
+  // Re-number rows
+  document.querySelectorAll('.drug-entry-row').forEach((r, i) => {
+    r.dataset.index = i;
+    const num = r.querySelector('.drug-entry-num');
+    if (num) num.textContent = i + 1;
+  });
+  document.getElementById('addDrugBtn').disabled = false;
+  document.getElementById('addDrugBtn').style.opacity = '1';
+}
+
+function quickAddDrug(name) {
+  // Fill first empty drug name input
+  const inputs = document.querySelectorAll('.drug-name-input');
+  for (const inp of inputs) {
+    if (!inp.value.trim()) {
+      inp.value = name;
+      inp.focus();
+      return;
+    }
+  }
+  // All filled — add a new row
+  addDrugRow();
+  setTimeout(() => {
+    const inputs2 = document.querySelectorAll('.drug-name-input');
+    inputs2[inputs2.length - 1].value = name;
+  }, 50);
+}
+
+// ── Autocomplete ────────────────────────────────────────────────────────────────
+
+function handleDrugInput(input, idx) {
+  const q = input.value.trim();
+  clearTimeout(_acTimers[idx]);
+  if (q.length < 2) { hideSuggestions(idx); return; }
+  _acTimers[idx] = setTimeout(() => fetchDrugSuggestions(q, idx, input), 350);
+}
+
+async function fetchDrugSuggestions(q, idx, input) {
+  try {
+    const r = await fetch(`${API}/drugs/search?q=${encodeURIComponent(q)}`, {
+      headers: { 'Authorization': `Bearer ${authToken}` }
+    });
+    if (!r.ok) return;
+    const data = await r.json();
+    showSuggestions(data.suggestions || [], idx, input);
+  } catch {}
+}
+
+function showSuggestions(suggestions, idx, input) {
+  const ac = document.getElementById(`ac-${idx}`);
+  if (!ac || !suggestions.length) { hideSuggestions(idx); return; }
+  ac.innerHTML = suggestions.map(s =>
+    `<div class="drug-autocomplete-item" onmousedown="selectSuggestion('${escHtml(s)}', ${idx})">${escHtml(s)}</div>`
+  ).join('');
+  ac.style.display = 'block';
+}
+
+function selectSuggestion(name, idx) {
+  const row = document.querySelector(`.drug-entry-row[data-index="${idx}"]`);
+  if (row) row.querySelector('.drug-name-input').value = name;
+  hideSuggestions(idx);
+}
+
+function hideSuggestions(idx) {
+  setTimeout(() => {
+    const ac = document.getElementById(`ac-${idx}`);
+    if (ac) ac.style.display = 'none';
+  }, 150);
+}
+
+// ── Main check function ─────────────────────────────────────────────────────────
+
+async function checkDrugs() {
+  // Collect drugs
+  const rows   = document.querySelectorAll('.drug-entry-row');
+  const drugs  = [];
+  for (const row of rows) {
+    const name   = row.querySelector('.drug-name-input')?.value.trim();
+    const dosage = row.querySelector('.drug-dosage-input')?.value.trim() || '';
+    if (name) drugs.push({ name, dosage });
+  }
+
+  if (!drugs.length) {
+    showToast('Please enter at least one drug name', 'warning');
+    return;
+  }
+
+  // Show loading state
+  const btn = document.getElementById('checkDrugBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span style="animation:spin 1s linear infinite;display:inline-block;">⟳</span> &nbsp;Checking…';
+
+  document.getElementById('drugEmptyState').style.display  = 'none';
+  document.getElementById('drugResultBody').style.display  = 'block';
+  document.getElementById('drugResultBody').innerHTML = `
+    <div style="padding:20px 0;">
+      <div class="skel-line" style="width:100%;height:80px;border-radius:14px;margin-bottom:16px;"></div>
+      <div class="skel-line" style="width:100%;height:120px;border-radius:14px;margin-bottom:16px;"></div>
+      <div class="skel-line" style="width:100%;height:100px;border-radius:14px;"></div>
+    </div>
+  `;
+
+  try {
+    const r = await fetch(`${API}/drugs/check`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+      body: JSON.stringify({
+        drugs,
+        language: (window.MEDAI_SETTINGS || {}).language || 'english',
+      }),
+    });
+
+    if (!r.ok) {
+      const e = await r.json().catch(() => ({}));
+      throw new Error(e.detail || `Server error (${r.status})`);
+    }
+
+    const data = await r.json();
+    renderDrugResult(data, drugs);
+    showToast('Drug analysis complete', 'success', '💊');
+  } catch (err) {
+    document.getElementById('drugResultBody').innerHTML = `
+      <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.3);
+                  border-radius:14px;padding:24px;text-align:center;">
+        <div style="font-size:32px;margin-bottom:8px;">❌</div>
+        <div style="font-size:14px;font-weight:700;color:var(--danger);margin-bottom:6px;">Analysis Failed</div>
+        <div style="font-size:12px;color:var(--muted2);">${escHtml(err.message)}</div>
+      </div>
+    `;
+    showToast('Drug check failed: ' + err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '🔬 Check Interactions';
+  }
+}
+
+// ── Render results ──────────────────────────────────────────────────────────────
+
+function renderDrugResult(data, drugsInput) {
+  const a = data.analysis || {};
+  const color    = a.severity_color || 'yellow';
+  const level    = a.severity_level || 'UNKNOWN';
+  const summary  = a.summary  || '';
+  const interactions = a.interactions  || [];
+  const sideEffects  = a.side_effects  || {};
+  const warnings     = a.warnings      || [];
+  const recs         = a.recommendations || [];
+  const disclaimer   = a.disclaimer    || '';
+
+  const severityIcon = {
+    green: '✅', yellow: '⚠️', orange: '🚨', red: '🛑'
+  }[color] || '⚠️';
+
+  // Drug pills
+  const drugPills = drugsInput.map(d =>
+    `<div class="drug-pill"><span class="pill-dot"></span>${escHtml(d.name)}${d.dosage ? ` <span style="color:var(--muted);font-size:10px;">· ${escHtml(d.dosage)}</span>` : ''}</div>`
+  ).join('');
+
+  // Interaction cards
+  const interactionHTML = interactions.length
+    ? interactions.map(ix => {
+        const sev = (ix.severity || 'low').toLowerCase();
+        const sevClass  = sev.includes('high') || sev.includes('major')   ? 'high'
+                        : sev.includes('critical') || sev.includes('contra') ? 'critical'
+                        : sev.includes('moderate') ? 'moderate' : 'low';
+        const sevColor  = { low:'var(--success)', moderate:'var(--warning)', high:'#f97316', critical:'var(--danger)' }[sevClass];
+        const drugs2    = Array.isArray(ix.drugs) ? ix.drugs.join(' + ') : '';
+        return `
+          <div class="interaction-card ${sevClass}">
+            <div><span class="interaction-sev-badge" style="background:${sevColor}22;color:${sevColor};">${sev.toUpperCase()}</span></div>
+            <div class="interaction-drugs">💊 ${escHtml(drugs2)}</div>
+            <div class="interaction-effect">${escHtml(ix.effect || ix.description || '')}</div>
+            ${ix.mechanism ? `<div class="interaction-mechanism">Mechanism: ${escHtml(ix.mechanism)}</div>` : ''}
+          </div>
+        `;
+      }).join('')
+    : '<div style="color:var(--muted);font-size:13px;padding:8px 0;">No significant drug-drug interactions detected between these medicines.</div>';
+
+  // Side effects
+  const sideHTML = Object.keys(sideEffects).length
+    ? `<div class="side-effects-grid">${
+        Object.entries(sideEffects).map(([drug, effects]) => `
+          <div>
+            <div class="side-effect-drug">💊 ${escHtml(drug)}</div>
+            ${(effects || []).slice(0, 6).map(e =>
+              `<div class="side-effect-item"><span class="side-effect-dot"></span>${escHtml(e)}</div>`
+            ).join('')}
+          </div>
+        `).join('')
+      }</div>`
+    : '<div style="color:var(--muted);font-size:13px;">Side effect data not available for these drugs.</div>';
+
+  // Warnings
+  const warnHTML = warnings.length
+    ? warnings.map(w => `<div class="warning-item"><span class="warning-icon">⚠️</span>${escHtml(w)}</div>`).join('')
+    : '<div style="color:var(--muted);font-size:13px;padding:8px 0;">No specific warnings found.</div>';
+
+  // Recommendations
+  const recHTML = recs.length
+    ? recs.map(r => `<div class="rec-item"><span class="rec-check">✓</span>${escHtml(r)}</div>`).join('')
+    : '';
+
+  // RxNorm known interactions (raw data)
+  const rxnormRaw = (data.rxnorm_interactions || []).slice(0, 3);
+  const rxnormHTML = rxnormRaw.length
+    ? `<div class="drug-result-section">
+        <div class="drug-result-section-header">🔗 RxNorm Database Interactions</div>
+        <div class="drug-result-section-body">
+          ${rxnormRaw.map(ix => `
+            <div class="warning-item">
+              <span class="warning-icon" style="color:var(--warning);">⚡</span>
+              <div>
+                <div style="font-size:11px;font-weight:700;color:var(--muted2);margin-bottom:2px;">
+                  ${ix.drugs.join(' + ')} — <span style="color:var(--warning);">${ix.severity}</span>
+                </div>
+                <div style="font-size:12px;color:var(--muted2);">${escHtml(ix.description)}</div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>`
+    : '';
+
+  document.getElementById('drugResultBody').innerHTML = `
+    <!-- Severity banner -->
+    <div class="severity-banner ${color}">
+      <div class="severity-icon">${severityIcon}</div>
+      <div style="flex:1;">
+        <div class="severity-level">${level} RISK</div>
+        <div class="severity-summary">${escHtml(summary)}</div>
+      </div>
+    </div>
+
+    <!-- Drug pills being checked -->
+    <div class="drug-pills-row">${drugPills}</div>
+
+    <!-- Interactions -->
+    <div class="drug-result-section">
+      <div class="drug-result-section-header">
+        <span>⚡</span> Drug-Drug Interactions
+        <span style="margin-left:auto;font-size:11px;color:var(--muted);font-weight:400;">${interactions.length} found</span>
+      </div>
+      <div class="drug-result-section-body">${interactionHTML}</div>
+    </div>
+
+    <!-- RxNorm raw interactions -->
+    ${rxnormHTML}
+
+    <!-- Side Effects -->
+    <div class="drug-result-section">
+      <div class="drug-result-section-header"><span>🩺</span> Side Effects by Drug</div>
+      <div class="drug-result-section-body">${sideHTML}</div>
+    </div>
+
+    <!-- Warnings -->
+    <div class="drug-result-section">
+      <div class="drug-result-section-header"><span>⚠️</span> Warnings &amp; Contraindications</div>
+      <div class="drug-result-section-body">${warnHTML}</div>
+    </div>
+
+    ${recs.length ? `
+    <!-- Recommendations -->
+    <div class="drug-result-section">
+      <div class="drug-result-section-header"><span>📋</span> Recommendations</div>
+      <div class="drug-result-section-body">${recHTML}</div>
+    </div>` : ''}
+
+    <!-- Disclaimer -->
+    <div class="drug-disclaimer">
+      <span style="font-size:16px;flex-shrink:0;">⚕️</span>
+      <div><b>Medical Disclaimer:</b> ${escHtml(disclaimer)} This tool uses FDA and RxNorm data analysed by AI and is for informational purposes only — not a substitute for professional medical advice.</div>
+    </div>
+
+    <!-- Download button -->
+    <div style="margin-top:16px;display:flex;gap:10px;">
+      <button onclick="downloadDrugReport()" style="background:var(--bg-input);border:1px solid var(--border);
+        border-radius:9px;padding:10px 18px;font-size:12px;color:var(--muted2);cursor:pointer;
+        font-family:'Sora',sans-serif;display:flex;align-items:center;gap:6px;">
+        💾 Download Report
+      </button>
+      <button onclick="document.getElementById('drugResultBody').style.display='none';
+                       document.getElementById('drugEmptyState').style.display='flex';"
+        style="background:none;border:1px solid var(--border);border-radius:9px;padding:10px 18px;
+               font-size:12px;color:var(--muted2);cursor:pointer;font-family:'Sora',sans-serif;">
+        ✕ Clear
+      </button>
+    </div>
+  `;
+}
+
+// ── Download drug report as text ────────────────────────────────────────────────
+
+function downloadDrugReport() {
+  const body = document.getElementById('drugResultBody');
+  if (!body) return;
+  const text = body.innerText;
+  const blob = new Blob([text], { type: 'text/plain' });
+  const a    = document.createElement('a');
+  a.href     = URL.createObjectURL(blob);
+  a.download = `drug_interaction_report_${new Date().toISOString().slice(0,10)}.txt`;
+  a.click();
+  showToast('Report downloaded', 'success');
+}
+
+/* Add spin animation */
+const _drugStyle = document.createElement('style');
+_drugStyle.textContent = '@keyframes spin { to { transform: rotate(360deg); } }';
+document.head.appendChild(_drugStyle);
 
 function doLogout() {
   localStorage.removeItem('medai_token');

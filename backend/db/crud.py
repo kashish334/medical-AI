@@ -335,3 +335,44 @@ def get_reports_per_day(db: Session, days: int = 14) -> list[dict]:
         .all()
     )
     return [{"date": str(r.date), "count": r.count} for r in rows]
+
+# ── User Management (admin) ────────────────────────────────────────────────────
+
+def get_user_by_id(db: Session, user_id: int) -> "User | None":
+    return db.query(User).filter(User.id == user_id).first()
+
+
+def set_user_active(db: Session, user_id: int, active: bool) -> bool:
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        return False
+    user.is_active = active
+    db.commit()
+    return True
+
+
+def set_user_admin(db: Session, user_id: int, is_admin: bool) -> bool:
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        return False
+    user.is_admin = is_admin
+    db.commit()
+    return True
+
+
+def reset_user_password(db: Session, user_id: int, new_password: str) -> bool:
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        return False
+    user.hashed_password = pwd_ctx.hash(new_password)
+    db.commit()
+    return True
+
+
+def delete_user(db: Session, user_id: int) -> bool:
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        return False
+    db.delete(user)
+    db.commit()
+    return True

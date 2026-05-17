@@ -15,7 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .db.database import engine, Base
 from .db import db_models          # noqa: F401 — ensures models are registered
-from .routers import auth, chat, admin, report
+from .routers import auth, chat, admin, report, stream, drugs
 
 # Create all DB tables on startup
 Base.metadata.create_all(bind=engine)
@@ -39,6 +39,8 @@ app.include_router(auth.router)
 app.include_router(chat.router)
 app.include_router(admin.router)
 app.include_router(report.router)
+app.include_router(stream.router)
+app.include_router(drugs.router)
 
 
 @app.get("/", tags=["health"])

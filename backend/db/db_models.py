@@ -21,6 +21,7 @@ class User(Base):
     email        = Column(String(120), unique=True, index=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
     is_admin     = Column(Boolean, default=False)
+    is_active    = Column(Boolean, default=True)
     created_at   = Column(DateTime, default=datetime.datetime.utcnow)
 
     messages = relationship("ChatMessage", back_populates="user", cascade="all, delete")
