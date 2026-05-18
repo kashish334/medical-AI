@@ -5,8 +5,8 @@ Singleton wrapper around the PubMedBERT sentence encoder.
 Loaded once at startup, reused everywhere.
 """
 
-import numpy as np
-from sentence_transformers import SentenceTransformer
+#import numpy as np
+#from sentence_transformers import SentenceTransformer
 from functools import lru_cache
 
 MODEL_NAME = "pritamdeka/S-PubMedBert-MS-MARCO"

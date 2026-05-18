@@ -6,8 +6,8 @@ Loads FAISS indexes and performs semantic search with a confidence threshold.
 
 import os
 import pickle
-import faiss
-import numpy as np
+#import faiss
+#import numpy as np
 from functools import lru_cache
 from dataclasses import dataclass
 
