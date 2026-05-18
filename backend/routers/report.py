@@ -9,10 +9,10 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
 
-from ..db.database import get_db
-from ..db.db_models import User, ReportUpload
-from ..dependencies import get_current_user
-from ..services.report_analyzer import analyze_pdf, analyze_image
+from db.database import get_db
+from db.db_models import User, ReportUpload
+from dependencies import get_current_user
+from services.report_analyzer import analyze_pdf, analyze_image
 
 router = APIRouter(prefix="/report", tags=["report"])
 

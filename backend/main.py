@@ -13,9 +13,9 @@ Swagger docs available at:
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .db.database import engine, Base
-from .db import db_models          # noqa: F401 — ensures models are registered
-from .routers import auth, chat, admin, report, stream, drugs
+from db.database import engine, Base
+from db import db_models          # noqa: F401 — ensures models are registered
+from routers import auth, chat, admin, report, stream, drugs
 
 # Create all DB tables on startup
 Base.metadata.create_all(bind=engine)

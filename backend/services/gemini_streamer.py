@@ -8,8 +8,8 @@ Used by POST /chat/stream endpoint.
 
 import logging
 import google.generativeai as genai
-from .api_key_manager import get_key_manager, NoAvailableKeyError
-from .gemini_client import _is_tpm_error, _is_tpd_error  # ← FIX: use shared error helpers
+from services.api_key_manager import get_key_manager, NoAvailableKeyError
+from services.gemini_client import _is_tpm_error, _is_tpd_error  # ← FIX: use shared error helpers
 
 logger = logging.getLogger(__name__)
 GEMINI_MODEL      = "gemini-2.5-flash"

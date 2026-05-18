@@ -8,10 +8,10 @@ POST /auth/login     — returns JWT token
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from ..db.database import get_db
-from ..db import crud
-from ..models.schemas import RegisterRequest, LoginRequest, TokenResponse
-from ..dependencies import create_access_token
+from db.database import get_db
+from db import crud
+from models.schemas import RegisterRequest, LoginRequest, TokenResponse
+from dependencies import create_access_token
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 

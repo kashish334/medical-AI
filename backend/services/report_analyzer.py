@@ -11,7 +11,7 @@ import base64
 import io
 import google.generativeai as genai
 from dotenv import load_dotenv
-from .api_key_manager import get_key_manager, NoAvailableKeyError
+from services.api_key_manager import get_key_manager, NoAvailableKeyError
 
 load_dotenv()
 

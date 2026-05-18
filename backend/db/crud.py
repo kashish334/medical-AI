@@ -8,7 +8,7 @@ API routers import from here — never touch the ORM directly from routers.
 import datetime
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc
-from .db_models import User, ChatMessage, Feedback
+from db.db_models import User, ChatMessage, Feedback
 from passlib.context import CryptContext
 
 pwd_ctx = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -262,7 +262,7 @@ def get_all_users_summary(db: Session) -> list[dict]:
         last_active = str(last_msg.created_at)[:16] if last_msg else "Never"
 
         # Report uploads count
-        from .db_models import ReportUpload
+        from db_models import ReportUpload
         report_count = (
             db.query(ReportUpload)
             .filter(ReportUpload.user_id == user.id)
@@ -317,12 +317,12 @@ def get_user_disease_breakdown(db: Session, user_id: int) -> list[dict]:
 
 
 def get_total_reports(db: Session) -> int:
-    from .db_models import ReportUpload
+    from db_models import ReportUpload
     return db.query(ReportUpload).count()
 
 
 def get_reports_per_day(db: Session, days: int = 14) -> list[dict]:
-    from .db_models import ReportUpload
+    from db_models import ReportUpload
     cutoff = datetime.datetime.utcnow() - datetime.timedelta(days=days)
     rows = (
         db.query(

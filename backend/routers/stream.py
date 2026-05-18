@@ -11,19 +11,19 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
-from ..db.database import get_db
-from ..db import crud
-from ..db.db_models import User
-from ..models.schemas import AskRequest
-from ..dependencies import get_current_user
-from ..services import rag_pipeline
-from ..services.gemini_streamer import stream_answer
-from ..services.intent_classifier import classify, Intent
-from ..services.category_router import predict_category
-from ..services.embedder import encode
-from ..services.retrieval import search
+from db.database import get_db
+from db import crud
+from db.db_models import User
+from models.schemas import AskRequest
+from dependencies import get_current_user
+from services import rag_pipeline
+from services.gemini_streamer import stream_answer
+from services.intent_classifier import classify, Intent
+from services.category_router import predict_category
+from services.embedder import encode
+from services.retrieval import search
 import google.generativeai as genai
-from ..services.api_key_manager import get_key_manager
+from services.api_key_manager import get_key_manager
 
 router = APIRouter(prefix="/stream", tags=["stream"])
 
@@ -49,7 +49,7 @@ async def stream_ask(
     intent, intent_conf = classify(payload.question)
 
     if intent == Intent.EMERGENCY:
-        from ..services.gemini_client import generate_emergency_response
+        from services.gemini_client import generate_emergency_response
         answer = generate_emergency_response()
         crud.save_message(db, current_user.id, payload.session_id, role="user", content=payload.question)
         msg = crud.save_message(db, current_user.id, payload.session_id, role="assistant",
@@ -61,7 +61,7 @@ async def stream_ask(
                                  headers={"Cache-Control":"no-cache","X-Accel-Buffering":"no"})
 
     if intent == Intent.OFF_TOPIC:
-        from ..services.gemini_client import generate_off_topic_response
+        from services.gemini_client import generate_off_topic_response
         answer = generate_off_topic_response(payload.question)
         crud.save_message(db, current_user.id, payload.session_id, role="user", content=payload.question)
         msg = crud.save_message(db, current_user.id, payload.session_id, role="assistant",

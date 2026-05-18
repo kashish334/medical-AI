@@ -15,9 +15,9 @@ import httpx
 
 logger = logging.getLogger(__name__)
 
-from ..db.db_models import User
-from ..dependencies import get_current_user
-from ..services.drug_checker import (
+from db.db_models import User
+from dependencies import get_current_user
+from services.drug_checker import (
     normalize_drug, get_fda_label, get_rxnorm_interactions, gemini_analyze
 )
 

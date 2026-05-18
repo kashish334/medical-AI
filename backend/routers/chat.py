@@ -12,16 +12,16 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from ..db.database import get_db
-from ..db import crud
-from ..db.db_models import User
-from ..models.schemas import (
+from db.database import get_db
+from db import crud
+from db.db_models import User
+from models.schemas import (
     AskRequest, AskResponse,
     HistoryResponse, SessionListResponse, SessionItem, MessageOut,
     FeedbackRequest, FeedbackResponse,
 )
-from ..dependencies import get_current_user
-from ..services import rag_pipeline
+from dependencies import get_current_user
+from services import rag_pipeline
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -110,7 +110,7 @@ def feedback(
     # Get category from the referenced message if available
     category = None
     if payload.message_id:
-        from ..db.db_models import ChatMessage
+        from db.db_models import ChatMessage
         msg = db.query(ChatMessage).filter(ChatMessage.id == payload.message_id).first()
         if msg:
             category = msg.category 

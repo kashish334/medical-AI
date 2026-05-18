@@ -17,9 +17,9 @@ from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 from dotenv import load_dotenv
 
-from .db.database import get_db
-from .db import crud
-from .db.db_models import User
+from db.database import get_db
+from db import crud
+from db.db_models import User
 
 load_dotenv()
 

@@ -16,7 +16,7 @@ How it works:
   - thread-safe via threading.Lock.
 
 Usage:
-    from .api_key_manager import get_key_manager
+    from api_key_manager import get_key_manager
 
     manager = get_key_manager("gemini")      # or "groq"
     key     = manager.get_active_key()

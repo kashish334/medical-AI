@@ -10,7 +10,7 @@ SQLAlchemy ORM models for all three tables:
 import datetime
 from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, Text, ForeignKey
 from sqlalchemy.orm import relationship
-from .database import Base
+from db.database import Base
 
 
 class User(Base):

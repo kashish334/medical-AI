@@ -13,7 +13,7 @@ On TPD hit  → marks key as day-exhausted, rotates, retries once.
 
 import logging
 import google.generativeai as genai
-from .api_key_manager import get_key_manager, NoAvailableKeyError
+from services.api_key_manager import get_key_manager, NoAvailableKeyError
 
 logger = logging.getLogger(__name__)
 

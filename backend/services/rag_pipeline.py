@@ -17,10 +17,10 @@ import os
 from dataclasses import dataclass, field
 from dotenv import load_dotenv
 
-from .intent_classifier import classify, Intent
-from .category_router   import predict_category
-from .embedder          import encode
-from .retrieval         import search
+from services.intent_classifier import classify, Intent
+from services.category_router   import predict_category
+from services.embedder          import encode
+from services.retrieval         import search
 
 load_dotenv()
 
@@ -29,7 +29,7 @@ load_dotenv()
 _PROVIDER = os.getenv("AI_PROVIDER", "gemini").lower()
 
 if _PROVIDER == "gemini":
-    from .gemini_client import (
+    from services.gemini_client import (
         generate_answer,
         generate_emergency_response,
         generate_off_topic_response,

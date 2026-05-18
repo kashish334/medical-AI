@@ -16,8 +16,8 @@ Flow:
 import httpx
 import logging
 import json
-from .api_key_manager import get_key_manager, NoAvailableKeyError
-from .gemini_client import _is_tpm_error, _is_tpd_error  # ← shared error helpers
+from services.api_key_manager import get_key_manager, NoAvailableKeyError
+from services.gemini_client import _is_tpm_error, _is_tpd_error  # ← shared error helpers
 import google.generativeai as genai
 
 logger = logging.getLogger(__name__)
