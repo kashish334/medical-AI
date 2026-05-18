@@ -575,14 +575,9 @@
 </div>
 
 <script>
-  const API = 'https://medical-ai-production-33b3.up.railway.app';  // ← paste your Railway URL here
-  let authToken   = localStorage.getItem('medai_token') || '';
-  let currentUser = JSON.parse(localStorage.getItem('medai_user') || '{}');
-
-  // If already logged in, go straight to app
-  if (authToken && currentUser.username) {
-    document.addEventListener('DOMContentLoaded', () => showApp());
-  }
+  const API = 'https://medical-ai-production-33b3.up.railway.app/';  // ← paste your Railway URL here
+  let authToken   = '';
+  let currentUser = {};
 
   function switchTab(tab) {
     document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', (tab==='login'?i===0:i===1)));
