@@ -1,4 +1,3 @@
 {
-  "$schema": "https://railpack.com/schema.json",
   "providers": ["python"]
 }
