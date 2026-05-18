@@ -9,8 +9,9 @@ Start command on Railway (root set to backend/):
 
 import os
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from db.database import engine, Base, SessionLocal
 from db import db_models  # noqa: F401 — ensures models are registered
@@ -45,21 +46,19 @@ app = FastAPI(
     version="2.0.0",
 )
 
-
-# ── CORS — must be added BEFORE routers are included ──────────────────────────
-# When allow_credentials=True, wildcard "*" is not allowed by browsers.
-# Always list origins explicitly.
+# ── CORS origins ───────────────────────────────────────────────────────────────
 ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://localhost:3000",
     "https://medical-ai-drab.vercel.app",
 ]
 
-# Allow additional origin via Railway env var (e.g. if Vercel URL changes)
 EXTRA_ORIGIN = os.getenv("ALLOWED_ORIGIN", "").strip()
 if EXTRA_ORIGIN and EXTRA_ORIGIN not in ALLOWED_ORIGINS:
     ALLOWED_ORIGINS.append(EXTRA_ORIGIN)
 
+
+# ── CORS middleware — MUST be added before routers ────────────────────────────
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
@@ -67,6 +66,23 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# ── Global exception handler — ensures CORS headers on ALL error responses ────
+# FastAPI's CORSMiddleware sometimes strips headers from 401/403/500 responses.
+# This handler re-adds them so the browser never sees a CORS error on failures.
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    origin = request.headers.get("origin", "")
+    cors_origin = origin if origin in ALLOWED_ORIGINS else ALLOWED_ORIGINS[-1]
+    return JSONResponse(
+        status_code=500,
+        content={"detail": str(exc)},
+        headers={
+            "Access-Control-Allow-Origin":      cors_origin,
+            "Access-Control-Allow-Credentials": "true",
+        },
+    )
 
 
 # ── Routers — included AFTER middleware ────────────────────────────────────────
