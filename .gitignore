@@ -1,7 +1,7 @@
 # Environment
 .env
 *.env
-
+node_modules/
 # Python
 __pycache__/
 *.py[cod]
