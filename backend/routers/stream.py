@@ -11,19 +11,19 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
-from ..db.database import get_db
-from ..db import crud
-from ..db.db_models import User
-from ..models.schemas import AskRequest
-from ..dependencies import get_current_user
-from ..services import rag_pipeline
-from ..services.gemini_streamer import stream_answer
-from ..services.intent_classifier import classify, Intent
-from ..services.category_router import predict_category
-from ..services.embedder import encode
-from ..services.retrieval import search
+from db.database import get_db
+from db import crud
+from db.db_models import User
+from models.schemas import AskRequest
+from dependencies import get_current_user
+from services import rag_pipeline
+from services.gemini_streamer import stream_answer
+from services.intent_classifier import classify, Intent
+from services.category_router import predict_category
+from services.embedder import encode
+from services.retrieval import search
 import google.generativeai as genai
-from ..services.api_key_manager import get_key_manager
+from services.api_key_manager import get_key_manager
 
 router = APIRouter(prefix="/stream", tags=["stream"])
 
