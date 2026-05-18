@@ -21,7 +21,22 @@ from routers import auth, chat, admin, report, stream, drugs
 
 # Create all DB tables on startup
 Base.metadata.create_all(bind=engine)
+from db.crud import get_user_by_username, create_user
+from db.database import SessionLocal
 
+def _seed_admin():
+    db = SessionLocal()
+    try:
+        username = os.getenv("ADMIN_USERNAME", "admin")
+        password = os.getenv("ADMIN_PASSWORD", "admin123")
+        email    = f"{username}@medbot.local"
+        if not get_user_by_username(db, username):
+            create_user(db, username, email, password, is_admin=True)
+            print(f"✅ Admin user '{username}' created")
+    finally:
+        db.close()
+
+_seed_admin()
 app = FastAPI(
     title="Medical Q&A Chatbot API",
     description="RAG-powered medical information chatbot using MedQuAD dataset + Gemini.",
