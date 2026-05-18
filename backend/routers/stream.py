@@ -86,6 +86,13 @@ async def stream_ask(
     # Save user message
     crud.save_message(db, current_user.id, payload.session_id, role="user", content=payload.question)
 
+    # ── Extract all values needed inside generator BEFORE it runs ──────────────
+    # Accessing SQLAlchemy ORM attributes inside a generator causes DetachedInstanceError
+    # because the session is closed by the time the generator executes.
+    user_id      = current_user.id
+    session_id   = payload.session_id
+    intent_value = intent.value
+
     # Collect full answer while streaming (for DB save)
     full_answer_parts = []
     contexts = [r.answer for r in results] if results else []
@@ -102,14 +109,14 @@ async def stream_ask(
                 full_answer_parts.append(chunk)
                 yield f"data: {json.dumps({'token': chunk})}\n\n"
 
-        # Save full answer to DB
+        # Save full answer to DB using pre-extracted plain values (not ORM objects)
         full_answer = "".join(full_answer_parts)
         msg = crud.save_message(
-            db, current_user.id, payload.session_id,
+            db, user_id, session_id,
             role="assistant", content=full_answer,
-            intent=intent.value, category=category, confidence=confidence,
+            intent=intent_value, category=category, confidence=confidence,
         )
-        yield f"data: {json.dumps({'done': True, 'intent': intent.value, 'category': category, 'confidence': confidence, 'low_confidence': low_conf, 'message_id': msg.id})}\n\n"
+        yield f"data: {json.dumps({'done': True, 'intent': intent_value, 'category': category, 'confidence': confidence, 'low_confidence': low_conf, 'message_id': msg.id})}\n\n"
 
     return StreamingResponse(
         generate(),
