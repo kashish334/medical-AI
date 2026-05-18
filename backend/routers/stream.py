@@ -24,6 +24,7 @@ from services.embedder import encode
 from services.retrieval import search
 import google.generativeai as genai
 from services.api_key_manager import get_key_manager
+import os
 
 router = APIRouter(prefix="/stream", tags=["stream"])
 
