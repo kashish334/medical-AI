@@ -15,7 +15,7 @@ venv/
 env/
 
 # Large ML artifacts (store on HuggingFace Hub or Google Drive)
-indexes/*.index
+#indexes/*.index
 indexes/*.bin
 models_saved/*.pkl
 models_saved/*.h5
