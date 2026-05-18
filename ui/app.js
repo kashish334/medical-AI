@@ -1151,10 +1151,10 @@ function getAppHTML() {
           <span class="nav-icon">💬</span> Chat
         </div>
         <div class="nav-item" onclick="showPage('report')" id="nav-report">
-          <span class="nav-icon">📊</span> Clinical Reports
+          <span class="nav-icon">📊</span> Report Analyzer
         </div>
         <div class="nav-item" onclick="showPage('drugs')" id="nav-drugs">
-          <span class="nav-icon">💊</span> Drug Interactions
+          <span class="nav-icon">💊</span> Drug Checker
         </div>
         ${currentUser.is_admin ? `<div class="nav-item" onclick="showPage('admin')" id="nav-admin">
           <span class="nav-icon">🎛</span> Admin Dashboard
@@ -3458,14 +3458,20 @@ function handleDrugInput(input, idx) {
 }
 
 async function fetchDrugSuggestions(q, idx, input) {
+  // Show loading state in dropdown
+  const ac = document.getElementById(`ac-${idx}`);
+  if (ac) {
+    ac.innerHTML = '<div class="drug-autocomplete-item" style="color:var(--muted);cursor:default;">Searching…</div>';
+    ac.style.display = 'block';
+  }
   try {
-    const r = await fetch(`${API}/drugs/search?q=${encodeURIComponent(q)}`, {
-      headers: { 'Authorization': `Bearer ${authToken}` }
-    });
-    if (!r.ok) return;
+    const r = await fetch(`${API}/drugs/search?q=${encodeURIComponent(q)}`);
+    if (!r.ok) { hideSuggestions(idx); return; }
     const data = await r.json();
-    showSuggestions(data.suggestions || [], idx, input);
-  } catch {}
+    const suggestions = data.suggestions || [];
+    if (!suggestions.length) { hideSuggestions(idx); return; }
+    showSuggestions(suggestions, idx, input);
+  } catch { hideSuggestions(idx); }
 }
 
 function showSuggestions(suggestions, idx, input) {

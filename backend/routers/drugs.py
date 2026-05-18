@@ -7,10 +7,13 @@ GET  /drugs/info/{name} — single drug info from OpenFDA
 """
 
 import asyncio
+import logging
 from typing import Annotated
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 import httpx
+
+logger = logging.getLogger(__name__)
 
 from ..db.db_models import User
 from ..dependencies import get_current_user
@@ -96,23 +99,37 @@ async def check_interactions(
 
 @router.get("/search")
 async def search_drugs(
-    q:            str = Query(..., min_length=2),
-    current_user: Annotated[User, Depends(get_current_user)] = None,
+    q: str = Query(..., min_length=2),
 ):
     """
-    Autocomplete drug name search using RxNorm spelling suggestions.
-    Returns up to 8 suggestions.
+    Autocomplete drug name search using RxNorm approximateTerm API.
+    Works with partial names like 'asp' → Aspirin, 'metf' → Metformin.
+    No auth required so autocomplete works instantly.
     """
     try:
-        async with httpx.AsyncClient(timeout=5.0) as client:
+        async with httpx.AsyncClient(timeout=6.0) as client:
+            # Use approximateTerm for partial/prefix matching
             r = await client.get(
-                f"{RXNORM_BASE}/spellingsuggestions.json",
-                params={"name": q}
+                f"{RXNORM_BASE}/approximateTerm.json",
+                params={"term": q, "maxEntries": 8, "option": 1}
             )
+            if r.status_code != 200:
+                return {"suggestions": []}
             data = r.json()
-            suggestions = data.get("suggestionGroup", {}).get("suggestionList", {}).get("suggestion", [])
+            candidates = data.get("approximateGroup", {}).get("candidate", [])
+            # Deduplicate case-insensitively, title-case the result
+            seen = set()
+            suggestions = []
+            for c in candidates:
+                name = c.get("name", "").strip()
+                key  = name.lower()
+                if name and key not in seen:
+                    seen.add(key)
+                    # Title-case for clean display (e.g. "AMOXICILLIN" → "Amoxicillin")
+                    suggestions.append(name.title())
             return {"suggestions": suggestions[:8]}
-    except Exception:
+    except Exception as e:
+        logger.warning(f"Drug search error: {e}")
         return {"suggestions": []}
 
 
