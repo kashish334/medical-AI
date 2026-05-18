@@ -1,9 +1,9 @@
 """
 backend/routers/chat.py
 ------------------------
-POST   /chat/ask               — run the full RAG pipeline
+POST   /chat/ask               — non-streaming fallback (direct Gemini)
 GET    /chat/history/{session} — return message history for a session
-GET    /chat/sessions          — list all session IDs for the current user
+GET    /chat/sessions          — list all sessions for the current user
 DELETE /chat/history/{session} — clear a session
 POST   /chat/feedback          — submit thumbs up/down
 """
@@ -14,14 +14,15 @@ from sqlalchemy.orm import Session
 
 from db.database import get_db
 from db import crud
-from db.db_models import User
+from db.db_models import User, ChatMessage
 from models.schemas import (
     AskRequest, AskResponse,
     HistoryResponse, SessionListResponse, SessionItem, MessageOut,
     FeedbackRequest, FeedbackResponse,
 )
 from dependencies import get_current_user
-from services import rag_pipeline
+from services.gemini_client import generate_answer, generate_emergency_response, generate_off_topic_response
+from services.intent_classifier import classify, Intent
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -32,38 +33,38 @@ def ask(
     db:           Annotated[Session, Depends(get_db)],
     current_user: Annotated[User,    Depends(get_current_user)],
 ):
-    # Build conversation history for multi-turn context
+    """Non-streaming fallback endpoint. Frontend uses /stream/ask for streaming."""
     history_rows = crud.get_session_history(db, current_user.id, payload.session_id)
     conversation_history = [
         {"role": row.role, "content": row.content}
-        for row in history_rows[-10:]          # last 5 turns
+        for row in history_rows[-10:]
     ]
 
-    # Run RAG pipeline
-    result = rag_pipeline.run(payload.question, conversation_history, language=getattr(payload, 'language', 'english'))
+    intent, _ = classify(payload.question)
 
-    # Persist user message
-    crud.save_message(
-        db, current_user.id, payload.session_id,
-        role="user", content=payload.question,
-    )
+    if intent == Intent.EMERGENCY:
+        answer   = generate_emergency_response()
+        category = "emergency"
+    elif intent == Intent.OFF_TOPIC:
+        answer   = generate_off_topic_response(payload.question)
+        category = "off_topic"
+    else:
+        answer   = generate_answer(payload.question, [], conversation_history, getattr(payload, "language", "english"))
+        category = "medical"
 
-    # Persist assistant message
+    crud.save_message(db, current_user.id, payload.session_id, role="user", content=payload.question)
     assistant_msg = crud.save_message(
         db, current_user.id, payload.session_id,
-        role="assistant",
-        content=result.answer,
-        intent=result.intent,
-        category=result.category,
-        confidence=result.confidence,
+        role="assistant", content=answer,
+        intent=intent.value, category=category, confidence=1.0,
     )
 
     return AskResponse(
-        answer=result.answer,
-        intent=result.intent,
-        category=result.category,
-        confidence=result.confidence,
-        low_confidence=result.low_confidence,
+        answer=answer,
+        intent=intent.value,
+        category=category,
+        confidence=1.0,
+        low_confidence=False,
         session_id=payload.session_id,
         message_id=assistant_msg.id,
     )
@@ -107,13 +108,11 @@ def feedback(
     db:           Annotated[Session, Depends(get_db)],
     current_user: Annotated[User,    Depends(get_current_user)],
 ):
-    # Get category from the referenced message if available
     category = None
     if payload.message_id:
-        from db.db_models import ChatMessage
         msg = db.query(ChatMessage).filter(ChatMessage.id == payload.message_id).first()
         if msg:
-            category = msg.category 
+            category = msg.category
 
     crud.save_feedback(
         db,
