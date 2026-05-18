@@ -10,12 +10,14 @@ Swagger docs available at:
     http://localhost:8000/docs
 """
 
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from db.database import engine, Base
-from db import db_models          # noqa: F401 — ensures models are registered
-from routers import auth, chat, admin, report, stream, drugs
+from .db.database import engine, Base
+from .db import db_models          # noqa: F401 — ensures models are registered
+from .routers import auth, chat, admin, report, stream, drugs
 
 # Create all DB tables on startup
 Base.metadata.create_all(bind=engine)
@@ -26,10 +28,24 @@ app = FastAPI(
     version="2.0.0",
 )
 
-# Allow Streamlit frontend to call the API
+import os
+
+# CORS — explicitly list allowed origins
+# When allow_credentials=True, wildcard "*" is not allowed by browsers
+ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "https://medical-ai-drab.vercel.app",   # your Vercel URL
+]
+
+# Also allow any extra origin set via environment variable on Railway
+EXTRA_ORIGIN = os.getenv("ALLOWED_ORIGIN", "")
+if EXTRA_ORIGIN:
+    ALLOWED_ORIGINS.append(EXTRA_ORIGIN)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
