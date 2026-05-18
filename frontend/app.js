@@ -2439,10 +2439,6 @@ async function sendMessage() {
   }
   if (window._autoScroll !== false) chatEl.scrollTop = chatEl.scrollHeight;
 
-  // ── Fetch follow-up suggestions ──────────────────────────────────────────
-  if (mid && meta.category !== 'error' && meta.category !== 'off_topic') {
-    fetchSuggestions(q, streamId);
-  }
 }
 
 async function fetchSuggestions(question, afterId) {
