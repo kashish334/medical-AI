@@ -17,6 +17,7 @@ import httpx
 import logging
 import json
 from .api_key_manager import get_key_manager, NoAvailableKeyError
+from .gemini_client import _is_tpm_error, _is_tpd_error  # ← shared error helpers
 import google.generativeai as genai
 
 logger = logging.getLogger(__name__)
@@ -142,6 +143,7 @@ def gemini_analyze(
 ) -> dict:
     """
     Send all collected data to Gemini for a comprehensive, readable analysis.
+    Uses full key rotation + retry — same pattern as gemini_client._call_gemini().
     Returns { summary, interactions, side_effects, warnings, recommendations, severity_level }
     """
     lang_map = {
@@ -208,21 +210,45 @@ Return ONLY a valid JSON object with exactly these fields:
 If no interactions found, set severity_level to "SAFE" and interactions to [].
 Return ONLY the JSON, no markdown, no extra text."""
 
-    try:
-        key = get_key_manager("gemini").get_active_key()
-        genai.configure(api_key=key)
-        model = genai.GenerativeModel(GEMINI_MODEL)
-        resp = model.generate_content(prompt)
-        text = resp.text.strip().replace("```json","").replace("```","").strip()
-        result = json.loads(text)
-        get_key_manager("gemini").record_usage(key, tokens_used=len(prompt)//4)
-        return result
-    except json.JSONDecodeError as e:
-        logger.error(f"Gemini returned invalid JSON: {e}")
-        return _fallback_result(drugs_input)
-    except Exception as e:
-        logger.error(f"Gemini drug analysis failed: {e}")
-        return _fallback_result(drugs_input)
+    # ── FIX: full key rotation + retry (was a single call with no rotation) ────
+    manager  = get_key_manager("gemini")
+    last_exc = None
+
+    for attempt in range(3):
+        try:
+            key = manager.get_active_key()
+            genai.configure(api_key=key)
+            model = genai.GenerativeModel(GEMINI_MODEL)
+            resp  = model.generate_content(prompt)
+            text  = resp.text.strip().replace("```json", "").replace("```", "").strip()
+            result = json.loads(text)
+            manager.record_usage(key, tokens_used=len(prompt) // 4)
+            return result
+
+        except NoAvailableKeyError:
+            logger.error("Gemini drug analysis: all API keys exhausted")
+            return _fallback_result(drugs_input)
+
+        except json.JSONDecodeError as e:
+            # Bad JSON from Gemini — not a rate-limit, don't retry
+            logger.error(f"Gemini returned invalid JSON: {e}")
+            return _fallback_result(drugs_input)
+
+        except Exception as exc:
+            last_exc = exc
+            if _is_tpd_error(exc):
+                logger.warning(f"[Gemini drug] TPD exceeded (attempt {attempt+1}), rotating key…")
+                manager.mark_tpd_exceeded(key)
+            elif _is_tpm_error(exc):
+                logger.warning(f"[Gemini drug] TPM exceeded (attempt {attempt+1}), rotating key…")
+                manager.mark_tpm_exceeded(key)
+            else:
+                # Non-rate-limit error — log and bail immediately
+                logger.error(f"Gemini drug analysis failed: {exc}")
+                return _fallback_result(drugs_input)
+
+    logger.error(f"Gemini drug analysis failed after 3 retries: {last_exc}")
+    return _fallback_result(drugs_input)
 
 
 def _fallback_result(drugs_input):

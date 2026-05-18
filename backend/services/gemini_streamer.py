@@ -9,6 +9,7 @@ Used by POST /chat/stream endpoint.
 import logging
 import google.generativeai as genai
 from .api_key_manager import get_key_manager, NoAvailableKeyError
+from .gemini_client import _is_tpm_error, _is_tpd_error  # ← FIX: use shared error helpers
 
 logger = logging.getLogger(__name__)
 GEMINI_MODEL      = "gemini-2.5-flash"
@@ -83,16 +84,26 @@ Provide a clear, accurate, and well-structured answer. Do not reference source n
                     yield chunk.text
             manager.record_usage(key, tokens_used=len(prompt) // 4)
             return
+
         except NoAvailableKeyError:
             yield "\n\n⚠️ All API keys are exhausted. Please try again in a minute."
             return
+
         except Exception as exc:
-            msg = str(exc).lower()
-            if "daily" in msg or "per day" in msg:
+            # ── FIX: replaced weak inline string checks with the same robust
+            #    helper functions used in gemini_client.py.
+            #    Old code missed: "resource_exhausted", "tpm", "too many requests",
+            #    "tpd", "daily quota", "exceeded your daily" — causing rate-limit
+            #    errors to fall through to the generic error branch instead of
+            #    triggering key rotation.
+            if _is_tpd_error(exc):
+                logger.warning(f"[Gemini stream] TPD exceeded (attempt {attempt+1}), rotating key…")
                 manager.mark_tpd_exceeded(key)
-            elif "rate" in msg or "quota" in msg or "429" in msg:
+            elif _is_tpm_error(exc):
+                logger.warning(f"[Gemini stream] TPM exceeded (attempt {attempt+1}), rotating key…")
                 manager.mark_tpm_exceeded(key)
             else:
                 yield f"\n\n⚠️ Error: {exc}"
                 return
+
     yield "\n\n⚠️ Failed after 3 retries. Please try again."
