@@ -1,5 +1,4 @@
 /* app.js — MedAI Core SPA */
-const API = "https://your-railway-backend.up.railway.app";
 function getAppHTML() {
   const isAdmin = currentUser.is_admin;
   return `
