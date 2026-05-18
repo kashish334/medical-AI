@@ -28,12 +28,14 @@ from services.api_key_manager import get_key_manager
 router = APIRouter(prefix="/stream", tags=["stream"])
 
 # SSE responses bypass FastAPI CORS middleware — must add headers manually
+# backend/routers/stream.py
 CORS_HEADERS = {
-    "Cache-Control":              "no-cache",
-    "X-Accel-Buffering":          "no",
-    "Access-Control-Allow-Origin": "*",
+    "Cache-Control": "no-cache",
+    "X-Accel-Buffering": "no",
+    "Access-Control-Allow-Origin": os.getenv("ALLOWED_ORIGIN", "https://medical-ai-drab.vercel.app"),
     "Access-Control-Allow-Headers": "Authorization, Content-Type",
     "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
+    "Access-Control-Allow-Credentials": "true",   # ← add this too
 }
 
 
@@ -58,7 +60,7 @@ async def stream_ask(
     intent, intent_conf = classify(payload.question)
 
     if intent == Intent.EMERGENCY:
-        from ..services.gemini_client import generate_emergency_response
+        from services.gemini_client import generate_emergency_response
         answer = generate_emergency_response()
         crud.save_message(db, current_user.id, payload.session_id, role="user", content=payload.question)
         msg = crud.save_message(db, current_user.id, payload.session_id, role="assistant",
@@ -70,7 +72,7 @@ async def stream_ask(
                                  headers=CORS_HEADERS)
 
     if intent == Intent.OFF_TOPIC:
-        from ..services.gemini_client import generate_off_topic_response
+        from services.gemini_client import generate_off_topic_response
         answer = generate_off_topic_response(payload.question)
         crud.save_message(db, current_user.id, payload.session_id, role="user", content=payload.question)
         msg = crud.save_message(db, current_user.id, payload.session_id, role="assistant",
