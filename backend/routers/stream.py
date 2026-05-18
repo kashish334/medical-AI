@@ -11,21 +11,30 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
-from db.database import get_db
-from db import crud
-from db.db_models import User
-from models.schemas import AskRequest
-from dependencies import get_current_user
-from services import rag_pipeline
-from services.gemini_streamer import stream_answer
-from services.intent_classifier import classify, Intent
-from services.category_router import predict_category
-from services.embedder import encode
-from services.retrieval import search
+from ..db.database import get_db
+from ..db import crud
+from ..db.db_models import User
+from ..models.schemas import AskRequest
+from ..dependencies import get_current_user
+from ..services import rag_pipeline
+from ..services.gemini_streamer import stream_answer
+from ..services.intent_classifier import classify, Intent
+from ..services.category_router import predict_category
+from ..services.embedder import encode
+from ..services.retrieval import search
 import google.generativeai as genai
-from services.api_key_manager import get_key_manager
+from ..services.api_key_manager import get_key_manager
 
 router = APIRouter(prefix="/stream", tags=["stream"])
+
+# SSE responses bypass FastAPI CORS middleware — must add headers manually
+CORS_HEADERS = {
+    "Cache-Control":              "no-cache",
+    "X-Accel-Buffering":          "no",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Headers": "Authorization, Content-Type",
+    "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
+}
 
 
 @router.post("/ask")
@@ -49,7 +58,7 @@ async def stream_ask(
     intent, intent_conf = classify(payload.question)
 
     if intent == Intent.EMERGENCY:
-        from services.gemini_client import generate_emergency_response
+        from ..services.gemini_client import generate_emergency_response
         answer = generate_emergency_response()
         crud.save_message(db, current_user.id, payload.session_id, role="user", content=payload.question)
         msg = crud.save_message(db, current_user.id, payload.session_id, role="assistant",
@@ -58,10 +67,10 @@ async def stream_ask(
             yield f"data: {json.dumps({'token': answer})}\n\n"
             yield f"data: {json.dumps({'done': True, 'intent':'emergency','category':'emergency','confidence':1.0,'message_id':msg.id})}\n\n"
         return StreamingResponse(emergency_gen(), media_type="text/event-stream",
-                                 headers={"Cache-Control":"no-cache","X-Accel-Buffering":"no"})
+                                 headers=CORS_HEADERS)
 
     if intent == Intent.OFF_TOPIC:
-        from services.gemini_client import generate_off_topic_response
+        from ..services.gemini_client import generate_off_topic_response
         answer = generate_off_topic_response(payload.question)
         crud.save_message(db, current_user.id, payload.session_id, role="user", content=payload.question)
         msg = crud.save_message(db, current_user.id, payload.session_id, role="assistant",
@@ -70,7 +79,7 @@ async def stream_ask(
             yield f"data: {json.dumps({'token': answer})}\n\n"
             yield f"data: {json.dumps({'done': True, 'intent':'off_topic','category':'off_topic','confidence':1.0,'message_id':msg.id})}\n\n"
         return StreamingResponse(off_gen(), media_type="text/event-stream",
-                                 headers={"Cache-Control":"no-cache","X-Accel-Buffering":"no"})
+                                 headers=CORS_HEADERS)
 
     # RAG retrieval
     category = predict_category(payload.question)
@@ -121,7 +130,7 @@ async def stream_ask(
     return StreamingResponse(
         generate(),
         media_type="text/event-stream",
-        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+        headers=CORS_HEADERS,
     )
 
 
@@ -134,7 +143,6 @@ async def get_suggestions(
     Returns 3 follow-up question suggestions for the given question/answer.
     Called after streaming completes.
     """
-    import os
     key = get_key_manager("gemini").get_active_key()
     genai.configure(api_key=key)
     model = genai.GenerativeModel("gemini-2.5-flash")
